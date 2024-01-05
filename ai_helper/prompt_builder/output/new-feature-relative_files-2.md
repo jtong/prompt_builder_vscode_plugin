@@ -1,3 +1,25 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -31,20 +53,12 @@ class FileExplorer {
         const config = this.treeDataProvider.config;
         if (config && config.output && config.output.relative_files && config.output.relative_files.path) {
             const ymlFilePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, config.output.relative_files.path);
-            const ymlContent = this.generateYmlContent(relativePaths);
+            const ymlContent = yaml.dump({ selected_files: relativePaths });
             fs.writeFileSync(ymlFilePath, ymlContent, 'utf8');
             vscode.window.showInformationMessage(`relative_files.yml updated at ${ymlFilePath}`);
         } else {
             vscode.window.showErrorMessage('Output path for relative_files.yml not defined in config.yml');
         }
-    }
-    
-    generateYmlContent(relativePaths) {
-        const ymlArray = relativePaths.map(path => ({
-            path: path,
-            reader: 'all'
-        }));
-        return yaml.dump(ymlArray);
     }
 }
 
@@ -169,3 +183,78 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.4"
+	}
+}
+
+```            
+
+
+## 任务
+
+现在输出的relative_files.yml 格式不是我想要的，我是想要的格式是：
+
+```yaml
+- path: <relative_path_of_file>
+  reader: all
+- path: <relative_path_of_file>
+  reader: all
+```
+
+目前的reader 都是 all， 以后可能会根据情况生成，这里要单独生成一个函数，方便将来扩展。

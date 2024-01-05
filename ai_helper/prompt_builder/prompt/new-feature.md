@@ -12,30 +12,13 @@
 
 ## 任务
 
-
-根据选中的文件生成relative_files.yml， 读取workspace根路径文件夹下的config.yml：
+现在输出的relative_files.yml 格式不是我想要的，我是想要的格式是：
 
 ```yaml
-project:
-  base_path: ./
-  ignore:
-    path:
-      - target
-      - .idea
-      - .mvn
-      - prompt
-      - prompt-builder
-      - .git
-      - ai_helper
-      - node_modules
-      - spike
-    file:
-      - .DS_Store
-output:
-  relative_files:
-    path: prompt_builder/relative_files.yml
-  prompt:
-    path: prompt_builder/output/
+- path: <relative_path_of_file>
+  reader: all
+- path: <relative_path_of_file>
+  reader: all
 ```
 
-根据output/relative_files/path读取输出地址，覆盖该文件
+目前的reader 都是 all， 以后可能会根据情况生成，这里要单独生成一个函数，方便将来扩展。
