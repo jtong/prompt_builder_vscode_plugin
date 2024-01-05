@@ -1,0 +1,54 @@
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.4"
+	}
+}

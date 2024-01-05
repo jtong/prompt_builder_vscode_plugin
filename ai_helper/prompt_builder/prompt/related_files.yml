@@ -1,0 +1,4 @@
+- path: extension.js
+  reader: all
+- path: package.json
+  reader: all
