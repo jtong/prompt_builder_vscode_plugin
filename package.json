@@ -18,6 +18,10 @@
 			{
 				"command": "fileExplorer.selectFiles",
 				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
 			}
 		],
 		"viewsContainers": {
@@ -39,6 +43,10 @@
 				{
 					"id": "recentFiles",
 					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles", 
+					"name": "Template Files" 
 				}
 			]
 		}

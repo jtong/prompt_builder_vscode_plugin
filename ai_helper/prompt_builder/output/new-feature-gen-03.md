@@ -1,3 +1,25 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -15,32 +37,29 @@ class FileExplorer {
         context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.selectFiles', () => this.getSelectedFiles()));
     }
 
-
     getSelectedFiles() {
         const selectedFiles = this.treeView.selection.map(file => file.resourceUri.fsPath);
         const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
         const relativePaths = selectedFiles.map(file => path.relative(workspaceRoot, file));
-    
+        
         console.log("Selected Files (Relative Paths):", relativePaths);
         vscode.window.showInformationMessage(`Selected Files: ${relativePaths.join(', ')}`);
         recentFilesProvider.updateRecentFiles(relativePaths);
-    
-        const ymlContent = this.generateYmlContent(relativePaths);
-        this.insertTextToEditor(ymlContent);
+
+        this.createRelativeFilesYml(relativePaths);
     }
-    
-    insertTextToEditor(text) {
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const position = editor.selection.active;
-            editor.edit(editBuilder => {
-                editBuilder.insert(position, text);
-            });
+
+    createRelativeFilesYml(relativePaths) {
+        const config = this.treeDataProvider.config;
+        if (config && config.output && config.output.relative_files && config.output.relative_files.path) {
+            const ymlFilePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, config.output.relative_files.path);
+            const ymlContent = this.generateYmlContent(relativePaths);
+            fs.writeFileSync(ymlFilePath, ymlContent, 'utf8');
+            vscode.window.showInformationMessage(`relative_files.yml updated at ${ymlFilePath}`);
         } else {
-            vscode.window.showErrorMessage('No active text editor found');
+            vscode.window.showErrorMessage('Output path for relative_files.yml not defined in config.yml');
         }
     }
-    
 
     generateYmlContent(relativePaths) {
         const ymlArray = relativePaths.map(path => ({
@@ -221,3 +240,77 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles", 
+					"name": "Template Files" 
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.4"
+	}
+}
+
+```            
+
+
+## 任务
+
+执行 Select Files 命令的时候，不再输出到文件，而是输出到编辑器中光标所在处

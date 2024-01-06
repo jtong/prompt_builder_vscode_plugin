@@ -1,3 +1,25 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -15,33 +37,30 @@ class FileExplorer {
         context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.selectFiles', () => this.getSelectedFiles()));
     }
 
-
     getSelectedFiles() {
         const selectedFiles = this.treeView.selection.map(file => file.resourceUri.fsPath);
         const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
         const relativePaths = selectedFiles.map(file => path.relative(workspaceRoot, file));
-    
+        
         console.log("Selected Files (Relative Paths):", relativePaths);
         vscode.window.showInformationMessage(`Selected Files: ${relativePaths.join(', ')}`);
         recentFilesProvider.updateRecentFiles(relativePaths);
-    
-        const ymlContent = this.generateYmlContent(relativePaths);
-        this.insertTextToEditor(ymlContent);
+
+        this.createRelativeFilesYml(relativePaths);
     }
-    
-    insertTextToEditor(text) {
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const position = editor.selection.active;
-            editor.edit(editBuilder => {
-                editBuilder.insert(position, text);
-            });
+
+    createRelativeFilesYml(relativePaths) {
+        const config = this.treeDataProvider.config;
+        if (config && config.output && config.output.relative_files && config.output.relative_files.path) {
+            const ymlFilePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, config.output.relative_files.path);
+            const ymlContent = this.generateYmlContent(relativePaths);
+            fs.writeFileSync(ymlFilePath, ymlContent, 'utf8');
+            vscode.window.showInformationMessage(`relative_files.yml updated at ${ymlFilePath}`);
         } else {
-            vscode.window.showErrorMessage('No active text editor found');
+            vscode.window.showErrorMessage('Output path for relative_files.yml not defined in config.yml');
         }
     }
     
-
     generateYmlContent(relativePaths) {
         const ymlArray = relativePaths.map(path => ({
             path: path,
@@ -158,61 +177,12 @@ class RecentFilesProvider {
 }
 
 
-class TemplateFilesProvider {
-    constructor() {
-        this.templatePath = this.getTemplatePath();
-    }
-
-    getTemplatePath() {
-        const config = new FileSystemProvider().readConfig();
-        return config && config.input && config.input.prompt_template && config.input.prompt_template.path ? config.input.prompt_template.path : '';
-    }
-
-    getTreeItem(element) {
-        // 返回一个可以点击的按钮
-        // return new vscode.TreeItem(element, vscode.TreeItemCollapsibleState.None);
-        return new TemplateFileItem(element, {
-            command: 'templateFile.openFile', // 在此处定义命令
-            title: '',
-            arguments: [this.getFilePath(element)] // 传递文件路径作为参数
-        });
-    }
-
-    getFilePath(fileName) {
-        const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-        return path.join(workspaceRoot, this.templatePath, fileName);
-    }
-
-    getChildren() {
-        if (!this.templatePath) return [];
-
-        const templateDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, this.templatePath);
-        return fs.existsSync(templateDir) ? fs.readdirSync(templateDir).filter(file => !fs.statSync(path.join(templateDir, file)).isDirectory()) : [];
-    }
-}
-
-class TemplateFileItem extends vscode.TreeItem {
-    constructor(label, command) {
-        super(label, vscode.TreeItemCollapsibleState.None);
-        this.command = command; // 添加点击命令
-    }
-}
-
 function activate(context) {
 	recentFilesProvider = new RecentFilesProvider();
     new FileExplorer(context);
 	const recentFilesTreeView = vscode.window.createTreeView('recentFiles', { treeDataProvider: recentFilesProvider, canSelectMany: true });
     context.subscriptions.push(recentFilesTreeView);
 
-    // 创建模板文件视图
-    const templateFilesProvider = new TemplateFilesProvider();
-    const templateFilesTreeView = vscode.window.createTreeView('templateFiles', { treeDataProvider: templateFilesProvider });
-    context.subscriptions.push(templateFilesTreeView);
-        context.subscriptions.push(vscode.commands.registerCommand('templateFile.openFile', (filePath) => {
-        // 处理文件打开逻辑
-        const openPath = vscode.Uri.file(filePath);
-        vscode.window.showTextDocument(openPath);
-    }));
 }
 
 function deactivate() {}
@@ -221,3 +191,97 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.4"
+	}
+}
+
+```            
+
+
+## 任务
+
+读取workspace根路径文件夹下的config.yml：
+
+```yaml
+project:
+  base_path: ./
+  ignore:
+    path:
+      - target
+      - .idea
+      - .mvn
+      - prompt
+      - prompt-builder
+      - .git
+      - ai_helper
+      - node_modules
+      - spike
+    file:
+      - .DS_Store
+input:
+  prompt_template:
+    path: prompt_builder/template      
+output:
+  relative_files:
+    path: prompt_builder/relative_files.yml
+  prompt:
+    path: prompt_builder/output/
+```
+
+根据 input/prompt_template/path 读取模版地址，每一个地址生成一个可以点击的按钮。
