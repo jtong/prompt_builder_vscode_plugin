@@ -1,9 +1,32 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── example
+│   └── config.yml
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
 const yaml = require('js-yaml'); // 需要添加对js-yaml的依赖
 const Handlebars = require('handlebars');
-const { prompt_render } = require('prompt-context-builder');
 
 let recentFilesProvider;
 
@@ -219,52 +242,6 @@ class TemplateFileItem extends vscode.TreeItem {
     }
 }
 
-
-async function generatePromptOutput() {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-        vscode.window.showWarningMessage('No active editor found');
-        return;
-    }
-
-    const currentFilePath = activeEditor.document.uri.fsPath;
-    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const configPath = path.join(workspaceRoot, 'config.yml');
-    const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
-
-    // 检查是否存在 relative_files.path
-    let relativeFilesPath = '';
-    if (config.input && config.input.relative_files && config.input.relative_files.path) {
-        relativeFilesPath = config.input.relative_files.path;
-    }
-
-    // 生成内容
-    const templateContent = fs.readFileSync(currentFilePath, 'utf8');
-    const renderedContent = prompt_render(templateContent, configPath, relativeFilesPath, workspaceRoot);
-
-    // 输出文件路径
-    const outputDir = path.join(workspaceRoot, config.output.prompt.path);
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    // 创建输出文件
-    const fileNamePrefix = path.basename(currentFilePath, path.extname(currentFilePath));
-    const outputFile = createOutputFilePath(outputDir, fileNamePrefix);
-    fs.writeFileSync(outputFile, renderedContent);
-    vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
-}
-
-function createOutputFilePath(outputDir, fileNamePrefix) {
-    let suffix = 1;
-    let outputFile;
-    do {
-        outputFile = path.join(outputDir, `${fileNamePrefix}_${suffix}.txt`);
-        suffix++;
-    } while (fs.existsSync(outputFile));
-    return outputFile;
-}
-
 function activate(context) {
 	recentFilesProvider = new RecentFilesProvider();
     new FileExplorer(context);
@@ -280,9 +257,6 @@ function activate(context) {
         const openPath = vscode.Uri.file(filePath);
         vscode.window.showTextDocument(openPath);
     }));
-
-    context.subscriptions.push(vscode.commands.registerCommand('generatePromptOutput', generatePromptOutput));
-
 }
 
 function deactivate() {}
@@ -291,3 +265,195 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.4"
+	}
+}
+
+```            
+
+## 外部依赖：
+
+### prompt_context_builder 包的index.js
+
+```js
+module.exports = {
+    import_read : require("./import_read"),
+    read_controller: require("./read_controller"),
+    read_model: require("./read_model"),
+    folder_tree: require("./read_folder"),
+    related_java_class_analysis: require("./related_java_class_analysis"),
+    resolve_java_class_full_name: require("./resolve_java_class_full_name"),
+    prompt_render: require("prompt_render")
+}
+```
+
+### prompt_context_builder 的包中的 prompt_render 函数
+
+```js
+const Handlebars = require('handlebars');
+const yaml = require('js-yaml');
+const fs = require('fs');
+const path = require('path');
+const read_folder_tree = require('./read_folder');
+const read_related_files = require('./related_files.js');
+
+/**
+ * 解析并渲染模板
+ * @param {string} templateText - 模板文本
+ * @param {string} configPath - 配置文件路径
+ * @param {string} contextPath - 上下文文件路径
+ * @return {string} 渲染后的内容
+ */
+function renderTemplate(templateText, configPath, contextPath, baseDir) {
+    // 解析路径（如果传入的是相对路径）
+    const resolvedConfigPath = path.resolve(baseDir, configPath);
+    // 读取并解析配置文件
+
+    const configContent = fs.readFileSync(resolvedConfigPath, 'utf8');
+    const config = yaml.load(configContent);
+    let project = config.project;
+
+    project.base_path = path.resolve(baseDir, project.base_path);
+
+    // console.log(project.base_path)
+
+    // 定义内部上下文
+    // 注册 Handlebars 助手
+    Handlebars.registerHelper('folder_tree', function() {
+        return new Handlebars.SafeString(read_folder_tree(project));
+    });
+
+    Handlebars.registerHelper('related_files', function() {
+        const resolvedContextPath = path.resolve(baseDir, contextPath);
+        const contextContent = fs.readFileSync(resolvedContextPath, 'utf8');
+        const contextData = yaml.load(contextContent);
+        return new Handlebars.SafeString(read_related_files(project.base_path, contextData));
+    });
+
+    Handlebars.registerHelper('related_files_from', function(options) {
+        const templateString = options.fn(this);
+        let trimmedString = templateString.trim();
+        if (trimmedString.startsWith("```")) {
+            const firstNewLineIndex = trimmedString.indexOf('\n') + 1;
+            const lastNewLineIndex = trimmedString.lastIndexOf('\n');
+            trimmedString = trimmedString.substring(firstNewLineIndex, lastNewLineIndex);
+        }
+        const contextData = yaml.load(trimmedString);
+        return new Handlebars.SafeString(read_related_files(project.base_path, contextData));
+    });
+
+    // 使用 Handlebars 编译和渲染模板
+    const template = Handlebars.compile(templateText);
+    return template({ data: {} });
+}
+
+module.exports = renderTemplate;
+```
+
+调用代码：
+
+```js
+    const renderedContent = renderTemplate(templateContent, configPath, contextPath, baseDir);
+```
+
+## 任务
+
+我希望添加一个命令可以将当前打开的文件调用prompt-context-builder里的函数生成文本并输出到文件，文件输出路径可能定义在config.yml中:
+
+```yaml
+project:
+  base_path: ./
+  ignore:
+    path:
+      - target
+      - .idea
+      - .mvn
+      - prompt
+      - prompt-builder
+      - .git
+      - ai_helper
+      - node_modules
+      - spike
+    file:
+      - .DS_Store
+input:
+  prompt_template:
+    path: ai_helper/prompt_builder/template    
+  relative_files:
+    path: ai_helper/prompt_builder/relative_files.html
+    template: >
+      ```yaml
+        
+      ```           
+output:     
+  prompt:
+    path: ai_helper/prompt_builder/output/
+```
+
+读取其中 output/prompt/path 的内容作为输出路径。输出的时候，按照当前editor的文件文件名作为前缀，并且在后面加上数字后缀，输出到该输出路径中。数字后缀的计算按照输出路径里前缀相同的文件里数字后缀最大的向后+1。
+另外：调用related_files时，如果存在 input/relative_files/path 则传进来来，否则就传个空让他报错。

@@ -12,7 +12,7 @@
 
 ## 任务
 
-读取workspace根路径文件夹下的config.yml：
+读取 workspace 根路径文件夹下的 config.yml：
 
 ```yaml
 project:
