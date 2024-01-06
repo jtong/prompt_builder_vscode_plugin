@@ -12,4 +12,35 @@
 
 ## 任务
 
-执行 Select Files 命令的时候，不再输出到文件，而是输出到编辑器中光标所在处
+我希望Select Files命令生成的内容能够按照模版输出，模版可能定义在config.yml中:
+
+```yaml
+project:
+  base_path: ./
+  ignore:
+    path:
+      - target
+      - .idea
+      - .mvn
+      - prompt
+      - prompt-builder
+      - .git
+      - ai_helper
+      - node_modules
+      - spike
+    file:
+      - .DS_Store
+input:
+  prompt_template:
+    path: ai_helper/prompt_builder/template    
+  relative_files:
+    template: >
+      ```yaml
+        {{{content}}}
+      ```           
+output:     
+  prompt:
+    path: ai_helper/prompt_builder/output/
+```
+
+读取其中 input/relative_files/template 的内容。其中的content变量是原来生成的yaml文本。

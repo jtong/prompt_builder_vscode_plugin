@@ -45,8 +45,8 @@
 					"name": "Recent Files"
 				},
 				{
-					"id": "templateFiles", 
-					"name": "Template Files" 
+					"id": "templateFiles",
+					"name": "Template Files"
 				}
 			]
 		}
@@ -56,6 +56,7 @@
 		"@types/vscode": "^1.73.0"
 	},
 	"dependencies": {
+		"handlebars": "^4.7.8",
 		"js-yaml": "^4.1.0",
 		"prompt-context-builder": "^1.0.4"
 	}

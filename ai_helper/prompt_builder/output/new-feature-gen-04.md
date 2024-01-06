@@ -1,8 +1,29 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
 const yaml = require('js-yaml'); // 需要添加对js-yaml的依赖
-const Handlebars = require('handlebars');
 
 let recentFilesProvider;
 
@@ -42,32 +63,13 @@ class FileExplorer {
         }
     }
     
-    readTemplate() {
-        try {
-            const config = this.treeDataProvider.readConfig();
-            if (!config || !config.input || !config.input.relative_files || !config.input.relative_files.template) {
-                console.error('Template not found in config.yml');
-                return '';
-            }
-            return config.input.relative_files.template;
-        } catch (error) {
-            console.error('Error reading template from config.yml:', error);
-            return '';
-        }
-    }
 
     generateYmlContent(relativePaths) {
-        const templateContent = this.readTemplate();
-        const template = Handlebars.compile(templateContent);
-
         const ymlArray = relativePaths.map(path => ({
             path: path,
             reader: 'all'
         }));
-
-        const content = yaml.dump(ymlArray);
-
-        return template({ content: content });
+        return yaml.dump(ymlArray);
     }
 }
 
@@ -241,3 +243,108 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles", 
+					"name": "Template Files" 
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.4"
+	}
+}
+
+```            
+
+
+## 任务
+
+我希望Select Files命令生成的内容能够按照模版输出，模版可能定义在config.yml中:
+
+```yaml
+project:
+  base_path: ./
+  ignore:
+    path:
+      - target
+      - .idea
+      - .mvn
+      - prompt
+      - prompt-builder
+      - .git
+      - ai_helper
+      - node_modules
+      - spike
+    file:
+      - .DS_Store
+input:
+  prompt_template:
+    path: ai_helper/prompt_builder/template    
+  relative_files:
+    template: >
+      ```yaml
+        
+      ```           
+output:     
+  prompt:
+    path: ai_helper/prompt_builder/output/
+```
+
+读取其中 input/relative_files/template 的内容。其中的content变量是原来生成的yaml文本。
