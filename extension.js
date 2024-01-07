@@ -19,18 +19,29 @@ class FileExplorer {
 
 
     getSelectedFiles() {
-        const selectedFiles = this.treeView.selection.map(file => file.resourceUri.fsPath);
+        // 从 fileExplorer 获取选中的文件
+        const fileExplorerSelected = this.treeView.selection.map(file => file.resourceUri.fsPath);
+
+        // 获取工作区根路径
         const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
+
+        // 从 recentFilesProvider 获取选中的文件并转换为完整路径
+        const recentFilesSelected = recentFilesProvider.getChildren().map(relativePath => path.join(workspaceRoot, relativePath));
+
+        // 合并两个数组并去除重复项
+        const selectedFiles = Array.from(new Set([...fileExplorerSelected, ...recentFilesSelected]));
+
+        // 转换为相对于工作区的路径
         const relativePaths = selectedFiles.map(file => path.relative(workspaceRoot, file));
-    
+
         console.log("Selected Files (Relative Paths):", relativePaths);
         vscode.window.showInformationMessage(`Selected Files: ${relativePaths.join(', ')}`);
         recentFilesProvider.updateRecentFiles(relativePaths);
-    
+
         const ymlContent = this.generateYmlContent(relativePaths);
         this.insertTextToEditor(ymlContent);
     }
-    
+
     insertTextToEditor(text) {
         const editor = vscode.window.activeTextEditor;
         if (editor) {
@@ -42,7 +53,7 @@ class FileExplorer {
             vscode.window.showErrorMessage('No active text editor found');
         }
     }
-    
+
     readTemplate() {
         try {
             const config = this.treeDataProvider.readConfig();
@@ -94,7 +105,7 @@ class FileSystemProvider {
         return element;
     }
 
-    
+
     processSingleSubfolder(dir, accumulatedPath = '') {
         const entries = this.getFiles(dir);
         if (entries.length === 1 && entries[0].collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
@@ -120,7 +131,7 @@ class FileSystemProvider {
         }
         return { singleSubfolder: false, children: entries };
     }
-    
+
     getChildren(element) {
         if (element) {
             const result = this.processSingleSubfolder(element.resourceUri.fsPath);
@@ -314,16 +325,16 @@ function createOutputFilePath(outputDir, fileNamePrefix) {
 }
 
 function activate(context) {
-	recentFilesProvider = new RecentFilesProvider();
+    recentFilesProvider = new RecentFilesProvider();
     new FileExplorer(context);
-	const recentFilesTreeView = vscode.window.createTreeView('recentFiles', { treeDataProvider: recentFilesProvider, canSelectMany: true });
+    const recentFilesTreeView = vscode.window.createTreeView('recentFiles', { treeDataProvider: recentFilesProvider, canSelectMany: true });
     context.subscriptions.push(recentFilesTreeView);
 
     // 创建模板文件视图
     const templateFilesProvider = new TemplateFilesProvider();
     const templateFilesTreeView = vscode.window.createTreeView('templateFiles', { treeDataProvider: templateFilesProvider });
     context.subscriptions.push(templateFilesTreeView);
-        context.subscriptions.push(vscode.commands.registerCommand('templateFile.openFile', (filePath) => {
+    context.subscriptions.push(vscode.commands.registerCommand('templateFile.openFile', (filePath) => {
         // 处理文件打开逻辑
         const openPath = vscode.Uri.file(filePath);
         vscode.window.showTextDocument(openPath);
@@ -333,7 +344,7 @@ function activate(context) {
 
 }
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
     activate,

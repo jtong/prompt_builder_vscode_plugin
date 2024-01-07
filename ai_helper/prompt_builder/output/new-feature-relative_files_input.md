@@ -118,32 +118,33 @@ class FileSystemProvider {
         return element;
     }
 
+    
     processSingleSubfolder(dir, accumulatedPath = '') {
         const entries = this.getFiles(dir);
         if (entries.length === 1 && entries[0].collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
             const subfolderPath = entries[0].resourceUri.fsPath;
             const subfolderName = path.basename(subfolderPath);
-            const result = this.processSingleSubfolder(subfolderPath);
+            const parentDir = path.dirname(subfolderPath);
+            const parentDirName = path.basename(parentDir);
+            const newPath = accumulatedPath ? path.join(accumulatedPath, subfolderName) : path.join(parentDirName, subfolderName);
+            const result = this.processSingleSubfolder(subfolderPath, newPath);
             if (result.singleSubfolder) {
-                // 如果子文件夹也只有一个子文件夹，则将其名称附加到当前路径
-                const newLabel = path.join(path.basename(dir), subfolderName, result.path);
                 return {
                     singleSubfolder: true,
-                    path: newLabel,
+                    path: result.path,
                     children: result.children
                 };
             } else {
-                // 只有当前文件夹下只有一个子文件夹
                 return {
                     singleSubfolder: true,
-                    path: path.join(path.basename(dir), subfolderName),
+                    path: newPath,
                     children: entries
                 };
             }
         }
         return { singleSubfolder: false, children: entries };
     }
-
+    
     getChildren(element) {
         if (element) {
             const result = this.processSingleSubfolder(element.resourceUri.fsPath);
@@ -151,7 +152,8 @@ class FileSystemProvider {
                 element.label = result.path; // 更新标签为新路径
                 this._onDidChangeTreeData.fire(element); // 触发更新
                 // 重要改动：确保返回单个子文件夹的子元素
-                const subfolderPath = path.join(element.resourceUri.fsPath, result.path.split(path.sep).pop());
+                const parentDir = path.dirname(element.resourceUri.fsPath);
+                const subfolderPath = path.join(parentDir, ...result.path.split(path.sep));
                 return this.getFiles(subfolderPath);
             } else {
                 return this.getFiles(element.resourceUri.fsPath);
@@ -169,7 +171,6 @@ class FileSystemProvider {
             }
         }
     }
-    
 
     getFiles(dir) {
         if (!this.config) return fs.readdirSync(dir).map(file => {
@@ -441,4 +442,4 @@ module.exports = {
 
 我希望执行 Select Files 命令的时候，读取的输入项不止来自fileExplorer选中的文件还来自 recentFiles 选中的文件。
 当选中的文件两边有重复的时候，需要去掉重复的文件。
-recentFiles中选中的文件，要用他们的全路径，目前应该是存在tips上的
+
