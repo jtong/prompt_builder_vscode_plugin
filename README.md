@@ -2,7 +2,6 @@
 
 打开工程所在文件夹，工程文件夹下需要有一个config.yml文件。内容可参考[https://github.com/jtong/prompt_builder_vscode_plugin/blob/main/example/config.yml](https://github.com/jtong/prompt_builder_vscode_plugin/blob/main/example/config.yml)
 
-
 在File Explorer View中选择文件，在Template Files View下双击打开一个模版，模版地址为config.yml中“input/prompt_template/path”属性值。
 
 在打开的编辑器中，执行“Related Files”命令就可以生成选中的文件所对应的yaml文本，该文本会基于一个模版输出，模版内容定义为config.yml中“input/relative_files/template”属性值。
@@ -11,6 +10,7 @@
 
 在打开的编辑器中，执行“Generate Prompt Output”命令就可以生成prompt文件。输出位置为config.yal中“output/prompt/path”属性值指定的地址。
 
+模版文件的语法为 [prompt-context-builder](https://www.npmjs.com/package/prompt-context-builder) 引擎的语法，该引擎基于handlebars提供了一系列helper函数，可以基于当前工程上下文生成提示词所需的任务上下文文本。
 
 ## Feature List
 
