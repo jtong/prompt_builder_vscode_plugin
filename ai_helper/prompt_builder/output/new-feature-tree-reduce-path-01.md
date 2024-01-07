@@ -1,3 +1,27 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── example
+│   └── config.yml
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -74,8 +98,6 @@ class FileExplorer {
 
 class FileSystemProvider {
     constructor() {
-        this._onDidChangeTreeData = new vscode.EventEmitter();
-        this.onDidChangeTreeData = this._onDidChangeTreeData.event;
         this.config = this.readConfig();
     }
 
@@ -94,74 +116,37 @@ class FileSystemProvider {
         return element;
     }
 
-    processSingleSubfolder(dir, accumulatedPath = '') {
-        const entries = this.getFiles(dir);
-        if (entries.length === 1 && entries[0].collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
-            const subfolderPath = entries[0].resourceUri.fsPath;
-            const subfolderName = path.basename(subfolderPath);
-            const result = this.processSingleSubfolder(subfolderPath);
-            if (result.singleSubfolder) {
-                // 如果子文件夹也只有一个子文件夹，则将其名称附加到当前路径
-                const newLabel = path.join(path.basename(dir), subfolderName, result.path);
-                return {
-                    singleSubfolder: true,
-                    path: newLabel,
-                    children: result.children
-                };
-            } else {
-                // 只有当前文件夹下只有一个子文件夹
-                return {
-                    singleSubfolder: true,
-                    path: path.join(path.basename(dir), subfolderName),
-                    children: entries
-                };
-            }
-        }
-        return { singleSubfolder: false, children: entries };
-    }
-
     getChildren(element) {
         if (element) {
-            const result = this.processSingleSubfolder(element.resourceUri.fsPath);
-            if (result.singleSubfolder) {
-                element.label = result.path; // 更新标签为新路径
-                this._onDidChangeTreeData.fire(element); // 触发更新
-                // 重要改动：确保返回单个子文件夹的子元素
-                const subfolderPath = path.join(element.resourceUri.fsPath, result.path.split(path.sep).pop());
-                return this.getFiles(subfolderPath);
-            } else {
-                return this.getFiles(element.resourceUri.fsPath);
-            }
+            return this.getFiles(element.resourceUri.fsPath);
         } else {
-            const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
-            const result = this.processSingleSubfolder(workspaceRoot);
-            if (result.singleSubfolder) {
-                // 根目录特殊处理
-                const rootItem = new vscode.TreeItem(result.path, vscode.TreeItemCollapsibleState.Collapsed);
-                this._onDidChangeTreeData.fire(null); // 触发根目录更新
-                return [rootItem];
-            } else {
-                return result.children || [];
-            }
+            return vscode.workspace.workspaceFolders ? this.getFiles(vscode.workspace.workspaceFolders[0].uri.fsPath) : [];
         }
     }
-    
 
     getFiles(dir) {
-        if (!this.config) return fs.readdirSync(dir).map(file => {
-            const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
-            return new vscode.TreeItem(vscode.Uri.file(filePath), stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-        });
-
-        return fs.readdirSync(dir).filter(file => {
-            const filePath = path.join(dir, file);
-            if (fs.statSync(filePath).isDirectory()) {
-                return !this.config.project.ignore.path.includes(file);
-            } else {
-                return !this.config.project.ignore.file.includes(file);
+        const readDir = (dirPath) => {
+            if (!fs.existsSync(dirPath)) {
+                return [];
             }
-        }).map(file => {
+
+            const files = fs.readdirSync(dirPath).filter(file => {
+                const filePath = path.join(dirPath, file);
+                if (fs.statSync(filePath).isDirectory()) {
+                    return !this.config.project.ignore.path.includes(file);
+                } else {
+                    return !this.config.project.ignore.file.includes(file);
+                }
+            });
+
+            if (files.length === 1 && fs.statSync(path.join(dirPath, files[0])).isDirectory()) {
+                return readDir(path.join(dirPath, files[0])).map(subFile => path.join(files[0], subFile));
+            }
+
+            return files;
+        };
+
+        return readDir(dir).map(file => {
             const filePath = path.join(dir, file);
             const stat = fs.statSync(filePath);
             return new vscode.TreeItem(vscode.Uri.file(filePath), stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
@@ -338,3 +323,198 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.6"
+	}
+}
+
+```            
+
+## 任务
+
+我希望文件树里，如果文件夹下有且只有一个文件夹，则以path形式显示为一个item，比如
+
+```
+.
+└── src
+    └── main
+        └── java
+```
+
+显示为 src/main/java 以此类推，除非超过一个文件夹以外的子项。
+
+### 典型case
+
+给定结构：
+```
+.
+├── HELP.md
+├── config.yml
+├── pom.xml
+└── src
+    ├── main
+    │   ├── java
+    │   │   └── dev
+    │   │       └── jtong
+    │   │           └── training
+    │   │               └── demo
+    │   │                   └── smart
+    │   │                       └── domain
+    │   │                           ├── MainApplication.java
+    │   │                           ├── controllers
+    │   │                           │   ├── JwtTokenController.java
+    │   │                           │   ├── SelfController.java
+    │   │                           │   ├── UsersController.java
+    │   │                           │   ├── filter
+    │   │                           │   │   └── JwtTokenFilter.java
+    │   │                           │   ├── representation
+    │   │                           │   │   ├── TokenRequest.java
+    │   │                           │   │   ├── UserRole.java
+    │   │                           │   │   └── UserVO.java
+    │   │                           │   └── security
+    │   │                           │       └── spring
+    │   │                           │           ├── JwtAuthenticationEntryPoint.java
+    │   │                           │           └── SecurityConfig.java
+    │   │                           ├── persistent
+    │   │                           │   ├── model
+    │   │                           │   │   └── user
+    │   │                           │   │       └── mybatis
+    │   │                           │   │           ├── PasswordChangeRequest.java
+    │   │                           │   │           ├── Role.java
+    │   │                           │   │           ├── RoleMapper.java
+    │   │                           │   │           ├── User.java
+    │   │                           │   │           └── UserModelMapper.java
+    │   │                           │   └── support
+    │   │                           │       └── mybatis
+    │   │                           │           └── IdHolder.java
+    │   │                           └── service
+    │   │                               └── JwtUtils.java
+    │   └── resources
+    │       ├── api
+    │       │   └── doc
+    │       │       └── user-api-specification.yaml
+    │       ├── application.yml
+    │       ├── db
+    │       │   └── migration
+    │       │       ├── V01__create_users.sql
+    │       │       └── V02__create_roles.sql
+    │       └── mybatis
+    │           └── mapper
+    │               ├── Mapper.xml
+    │               └── Model.xml
+    └── test
+```
+应显示为：
+```
+.
+├── HELP.md
+├── config.yml
+├── pom.xml
+└── src
+    ├── main
+    │   ├── java/dev/jtong/training/demo/smart/domain
+    │   │   ├── MainApplication.java
+    │   │   ├── controllers
+    │   │   │   ├── JwtTokenController.java
+    │   │   │   ├── SelfController.java
+    │   │   │   ├── UsersController.java
+    │   │   │   ├── filter
+    │   │   │   │   └── JwtTokenFilter.java
+    │   │   │   ├── representation
+    │   │   │   │   ├── TokenRequest.java
+    │   │   │   │   ├── UserRole.java
+    │   │   │   │   └── UserVO.java
+    │   │   │   └── security/spring
+    │   │   │       ├── JwtAuthenticationEntryPoint.java
+    │   │   │       └── SecurityConfig.java
+    │   │   ├── persistent
+    │   │   │   ├── model/user/mybatis
+    │   │   │   │   ├── PasswordChangeRequest.java
+    │   │   │   │   ├── Role.java
+    │   │   │   │   ├── RoleMapper.java
+    │   │   │   │   ├── User.java
+    │   │   │   │   └── UserModelMapper.java
+    │   │   │   └── support/mybatis
+    │   │   │       └── IdHolder.java
+    │   │   └── service
+    │   │       └── JwtUtils.java
+    │   └── resources
+    │       ├── api/doc
+    │       │   └── user-api-specification.yaml
+    │       ├── application.yml
+    │       ├── db/migration
+    │       │   ├── V01__create_users.sql
+    │       │   └── V02__create_roles.sql
+    │       └── mybatis/mapper
+    │           ├── Mapper.xml
+    │           └── Model.xml
+    └── test
+```

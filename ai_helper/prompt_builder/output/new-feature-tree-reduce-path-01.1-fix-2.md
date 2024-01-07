@@ -1,3 +1,28 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── example
+│   └── config.yml
+├── extension copy.js
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -126,9 +151,7 @@ class FileSystemProvider {
             if (result.singleSubfolder) {
                 element.label = result.path; // 更新标签为新路径
                 this._onDidChangeTreeData.fire(element); // 触发更新
-                // 重要改动：确保返回单个子文件夹的子元素
-                const subfolderPath = path.join(element.resourceUri.fsPath, result.path.split(path.sep).pop());
-                return this.getFiles(subfolderPath);
+                return result.children;
             } else {
                 return this.getFiles(element.resourceUri.fsPath);
             }
@@ -338,3 +361,116 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.6"
+	}
+}
+
+```            
+
+## 任务
+
+我希望文件树里，当展开一个文件夹的时候，如果该文件夹下的子元素过滤后有且只有一个子文件夹，则把子元素的名字加到该文件夹上显示为一个path，并一直向下递归，直到下面不只有一个子文件夹结束，比如
+
+```
+.
+└── src
+    └── main
+        └── java
+```
+
+在展开src的时候会发现src下面只有main，会把src的名字改为 src/main，然后继续递归main，发现main下面也只有一个java，于是src/main的名字会改为 src/main/java。直到发现下面不只有一个元素的时候正常显示。
+
+目前存在问题，展开的时候名字已经改了，但是子元素没有显示，手动展开显示子元素时，已经合并的子文件夹还是显示了。
+
+比如
+
+```
+.
+└── src
+    └── aaa
+        ├── abc
+        └── xyz
+
+```
+实际显示为：
+```
+.
+└── src/aaa
+    └── aaa
+```
+希望显示为:
+```
+.
+└── src/aaa
+    ├── abc
+    └── xyz
+```
