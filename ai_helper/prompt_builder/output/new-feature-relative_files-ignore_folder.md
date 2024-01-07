@@ -1,3 +1,27 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── example
+│   └── config.yml
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -23,9 +47,8 @@ class FileExplorer {
     
     getSelectedFiles() {
         // 从 fileExplorer 获取选中的文件
-        const fileExplorerSelected = this.treeView.selection
-        .filter(file => fs.statSync(file.resourceUri.fsPath).isFile())
-        .map(file => file.resourceUri.fsPath);
+        const fileExplorerSelected = this.treeView.selection.map(file => file.resourceUri.fsPath);
+
         // 获取工作区根路径
         const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
 
@@ -93,7 +116,7 @@ class FileSystemProvider {
         this.onDidChangeTreeData = this._onDidChangeTreeData.event;
         this.config = this.readConfig();
     }
-
+    
     refresh() {
         this._onDidChangeTreeData.fire(null);
     }
@@ -228,27 +251,19 @@ class RecentFilesProvider {
     }
 
     updateRecentFiles(files) {
-        const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
+        files.forEach(file => {
+            // 移除重复项
+            this.recentFiles = this.recentFiles.filter(recentFile => recentFile !== file);
 
-        files.forEach(relativePath => {
-            // 转换为绝对路径
-            const absolutePath = path.join(workspaceRoot, relativePath);
-    
-            // 确保路径指向文件而非文件夹
-            if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
-                // 移除重复项
-                this.recentFiles = this.recentFiles.filter(recentFile => recentFile !== relativePath);
-    
-                // 添加到列表开头
-                this.recentFiles.unshift(relativePath);
-    
-                // 保持列表在最大数量限制之内
-                if (this.recentFiles.length > this.maxFiles) {
-                    this.recentFiles.pop();
-                }
+            // 添加到列表开头
+            this.recentFiles.unshift(file);
+
+            // 保持列表在最大数量限制之内
+            if (this.recentFiles.length > this.maxFiles) {
+                this.recentFiles.pop();
             }
         });
-    
+
         this._onDidChangeTreeData.fire();
     }
 }
@@ -371,3 +386,90 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "fileExplorer.refresh",
+					"when": "view == fileExplorer",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.6"
+	}
+}
+
+```            
+
+## 任务
+
+我希望如果 fileExplorer 上选中了文件夹，那么不管是在执行Select Files计算relative_files的时候，还是更新recent file view的时候，都忽略掉。

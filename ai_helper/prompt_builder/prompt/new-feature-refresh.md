@@ -19,4 +19,4 @@
 
 ## 任务
 
-我希望如果 fileExplorer 上选中了文件夹，那么不管是在执行Select Files计算relative_files的时候，还是更新recent file view的时候，都忽略掉。
+我希望执行 fileExplorer view 的bar上有一个按钮，点击可以刷新fileExplorer view。
