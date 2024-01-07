@@ -1,3 +1,27 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── example
+│   └── config.yml
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -94,33 +118,32 @@ class FileSystemProvider {
         return element;
     }
 
-    
     processSingleSubfolder(dir, accumulatedPath = '') {
         const entries = this.getFiles(dir);
         if (entries.length === 1 && entries[0].collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
             const subfolderPath = entries[0].resourceUri.fsPath;
             const subfolderName = path.basename(subfolderPath);
-            const parentDir = path.dirname(subfolderPath);
-            const parentDirName = path.basename(parentDir);
-            const newPath = accumulatedPath ? path.join(accumulatedPath, subfolderName) : path.join(parentDirName, subfolderName);
-            const result = this.processSingleSubfolder(subfolderPath, newPath);
+            const result = this.processSingleSubfolder(subfolderPath);
             if (result.singleSubfolder) {
+                // 如果子文件夹也只有一个子文件夹，则将其名称附加到当前路径
+                const newLabel = path.join(path.basename(dir), subfolderName, result.path);
                 return {
                     singleSubfolder: true,
-                    path: result.path,
+                    path: newLabel,
                     children: result.children
                 };
             } else {
+                // 只有当前文件夹下只有一个子文件夹
                 return {
                     singleSubfolder: true,
-                    path: newPath,
+                    path: path.join(path.basename(dir), subfolderName),
                     children: entries
                 };
             }
         }
         return { singleSubfolder: false, children: entries };
     }
-    
+
     getChildren(element) {
         if (element) {
             const result = this.processSingleSubfolder(element.resourceUri.fsPath);
@@ -128,8 +151,7 @@ class FileSystemProvider {
                 element.label = result.path; // 更新标签为新路径
                 this._onDidChangeTreeData.fire(element); // 触发更新
                 // 重要改动：确保返回单个子文件夹的子元素
-                const parentDir = path.dirname(element.resourceUri.fsPath);
-                const subfolderPath = path.join(parentDir, ...result.path.split(path.sep));
+                const subfolderPath = path.join(element.resourceUri.fsPath, result.path.split(path.sep).pop());
                 return this.getFiles(subfolderPath);
             } else {
                 return this.getFiles(element.resourceUri.fsPath);
@@ -147,6 +169,7 @@ class FileSystemProvider {
             }
         }
     }
+    
 
     getFiles(dir) {
         if (!this.config) return fs.readdirSync(dir).map(file => {
@@ -339,3 +362,83 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.6"
+	}
+}
+
+```            
+
+## 任务
+
+我希望执行 Select Files 命令的时候，读取的输入项不止来自fileExplorer选中的文件还来自 recentFiles 选中的文件。
+当选中的文件两边有重复的时候，需要去掉重复的文件。
+recentFiles中选中的文件，要用他们的全路径，目前应该是存在tips上的

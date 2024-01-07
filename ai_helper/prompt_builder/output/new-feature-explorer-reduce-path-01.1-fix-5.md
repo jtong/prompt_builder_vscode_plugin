@@ -1,3 +1,29 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── README.md
+├── example
+│   └── config.yml
+├── extension copy 2.js
+├── extension copy.js
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+└── package.json
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -94,15 +120,12 @@ class FileSystemProvider {
         return element;
     }
 
-    
-    processSingleSubfolder(dir, accumulatedPath = '') {
+     processSingleSubfolder(dir, accumulatedPath = '') {
         const entries = this.getFiles(dir);
         if (entries.length === 1 && entries[0].collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
             const subfolderPath = entries[0].resourceUri.fsPath;
             const subfolderName = path.basename(subfolderPath);
-            const parentDir = path.dirname(subfolderPath);
-            const parentDirName = path.basename(parentDir);
-            const newPath = accumulatedPath ? path.join(accumulatedPath, subfolderName) : path.join(parentDirName, subfolderName);
+            const newPath = accumulatedPath ? path.join(accumulatedPath, subfolderName) : subfolderName;
             const result = this.processSingleSubfolder(subfolderPath, newPath);
             if (result.singleSubfolder) {
                 return {
@@ -121,6 +144,7 @@ class FileSystemProvider {
         return { singleSubfolder: false, children: entries };
     }
     
+    
     getChildren(element) {
         if (element) {
             const result = this.processSingleSubfolder(element.resourceUri.fsPath);
@@ -128,8 +152,7 @@ class FileSystemProvider {
                 element.label = result.path; // 更新标签为新路径
                 this._onDidChangeTreeData.fire(element); // 触发更新
                 // 重要改动：确保返回单个子文件夹的子元素
-                const parentDir = path.dirname(element.resourceUri.fsPath);
-                const subfolderPath = path.join(parentDir, ...result.path.split(path.sep));
+                const subfolderPath = path.join(element.resourceUri.fsPath, ...result.path.split(path.sep));
                 return this.getFiles(subfolderPath);
             } else {
                 return this.getFiles(element.resourceUri.fsPath);
@@ -147,6 +170,8 @@ class FileSystemProvider {
             }
         }
     }
+
+    
 
     getFiles(dir) {
         if (!this.config) return fs.readdirSync(dir).map(file => {
@@ -339,3 +364,127 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "helloworld-minimal-sample",
+	"description": "Minimal HelloWorld example for VS Code",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-minimal-sample",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh Custom Explorer"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Select Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		}
+	},
+	"scripts": {},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.6"
+	}
+}
+
+```            
+
+## 任务
+
+我希望文件树里，当展开一个文件夹的时候，如果该文件夹下的子元素过滤后有且只有一个子文件夹，则把子元素的名字加到该文件夹上显示为一个path，并一直向下递归，直到下面不只有一个子文件夹结束，比如
+
+```
+.
+└── src
+    └── main
+        └── java
+```
+
+在展开src的时候会发现src下面只有main，会把src的名字改为 src/main，然后继续递归main，发现main下面也只有一个java，于是src/main的名字会改为 src/main/java。直到发现下面不只有一个元素的时候正常显示。
+
+目前存在问题，当有多级子目录都只有一个下级子目录的时候，显示会出错
+
+
+比如:
+
+```
+.
+└── src
+    └── aaa
+        └── abc
+            ├── lmn
+            └── xyz
+
+```
+
+展开src时显示为:
+```
+.
+└── aaa/abc
+```
+再展开显示为：
+```
+.
+└── aaa/abc
+    ├── lmn
+    └── xyz
+```
+
+期望显示为：
+```
+.
+└── src/aaa/abc
+    ├── lmn
+    └── xyz
+```
+请修正
