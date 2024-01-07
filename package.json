@@ -13,7 +13,7 @@
 		"commands": [
 			{
 				"command": "fileExplorer.refresh",
-				"title": "Refresh Custom Explorer"
+				"title": "Refresh"
 			},
 			{
 				"command": "fileExplorer.selectFiles",
@@ -51,6 +51,15 @@
 				{
 					"id": "templateFiles",
 					"name": "Template Files"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "fileExplorer.refresh",
+					"when": "view == fileExplorer",
+					"group": "navigation"
 				}
 			]
 		}

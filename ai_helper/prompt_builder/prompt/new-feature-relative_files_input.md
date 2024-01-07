@@ -19,4 +19,5 @@
 
 ## 任务
 
-我希望执行 fileExplorer view 的bar上有一个按钮，点击可以刷新fileExplorer view。
+我希望执行 Select Files 命令的时候，读取的输入项不止来自fileExplorer选中的文件还来自 recentFiles 选中的文件。
+当选中的文件两边有重复的时候，需要去掉重复的文件。
