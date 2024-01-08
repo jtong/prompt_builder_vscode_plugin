@@ -19,4 +19,4 @@
 
 ## 任务
 
-我希望如果 fileExplorer 上选中了文件夹，那么不管是在执行Select Files计算relative_files的时候，还是更新recent file view的时候，都忽略掉。
+我希望执行Generate Prompt Output的时候，输出文件与模板的文件的后缀保持一致，而不是使用txt

@@ -3,3 +3,7 @@ node_modules
 .DS_Store
 .git
 .idea
+config.yml
+extension.js
+webpack.config.js
+

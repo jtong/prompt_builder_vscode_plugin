@@ -26,3 +26,4 @@
 - [x] File Explorer View中，如果存在下面只有一个文件夹的文件夹，则合并到path中显示为一个元素
 - [x] 同时在File Explorer View和Recent Files View中选择，然后归并两者
 - [x] 无视掉在File Explorer View中选择的文件夹
+- [x] 支持修改config.yml中的template path后，通过Template File View的刷新按钮重新加载
