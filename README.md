@@ -8,7 +8,7 @@
 
 一旦执行完“Related Files”命令，那么执行过的文件会出现在Recent Files View中，可以同时选择File Explorer View和Recent Files View中的文件执行“Related Files”命令，相同文件会被过滤掉只生成一份。
 
-在打开的编辑器中，执行“Generate Prompt Output”命令就可以生成prompt文件。输出位置为config.yal中“output/prompt/path”属性值指定的地址。
+在打开的编辑器中，执行“Generate Prompt Output”命令就可以生成prompt文件。输出位置为config.yml中“output/prompt/path”属性值指定的地址。
 
 模版文件的语法为 [prompt-context-builder](https://www.npmjs.com/package/prompt-context-builder) 引擎的语法，该引擎基于handlebars提供了一系列helper函数，可以基于当前工程上下文生成提示词所需的任务上下文文本。
 

@@ -8,7 +8,14 @@
 
 ## 相关文件
 
-{{ related_files }}
+{{#related_files_from }}
+```yaml
+- path: extension.js
+  reader: all
+- path: package.json
+  reader: all
+```
+{{/related_files_from }}
 
 ## 任务
 
