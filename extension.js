@@ -15,12 +15,16 @@ class FileExplorer {
 
         // 注册一个命令，当用户选择文件时触发
         context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.selectFiles', () => this.getSelectedFiles()));
+        context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.openFile', (filePath) => {
+            this.treeDataProvider.openFile(filePath);
+        }));
     }
 
     refresh() {
         this.treeDataProvider.refresh();
     }
-    
+
+
     getSelectedFiles() {
         // 从 fileExplorer 获取选中的文件
         const fileExplorerSelected = this.treeView.selection
@@ -98,6 +102,11 @@ class FileSystemProvider {
         this._onDidChangeTreeData.fire(null);
     }
 
+    openFile(filePath) {
+        const openPath = vscode.Uri.file(filePath);
+        vscode.window.showTextDocument(openPath);
+    }
+
     readConfig() {
         try {
             const configPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'config.yml');
@@ -111,6 +120,7 @@ class FileSystemProvider {
 
     getTreeItem(element) {
         element.id =  element.resourceUri.fsPath;
+        element.command = { command: 'fileExplorer.openFile', title: "Open File", arguments: [element.resourceUri.fsPath] };
         return element;
     }
 
