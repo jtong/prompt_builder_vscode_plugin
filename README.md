@@ -27,3 +27,4 @@
 - [x] 同时在File Explorer View和Recent Files View中选择，然后归并两者
 - [x] 无视掉在File Explorer View中选择的文件夹
 - [x] 支持修改config.yml中的template path后，通过Template File View的刷新按钮重新加载
+- [x] 支持Template Files View的文件按最近修改顺序排序，按刷新按钮刷新排序。

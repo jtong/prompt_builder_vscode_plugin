@@ -19,4 +19,4 @@
 
 ## 任务
 
-我希望templateFiles里的文件按照最近修改的日期排序
+我希望FileExplorer可以点击打开文件
