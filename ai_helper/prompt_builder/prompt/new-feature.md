@@ -10,13 +10,13 @@
 
 {{#related_files_from }}
 ```yaml
-- path: extension.js
-  reader: all
 - path: package.json
+  reader: all
+- path: extension.js
   reader: all
 ```
 {{/related_files_from }}
 
 ## 任务
 
-我希望templateFiles里的文件按照最近修改的日期排序
+我希望 点击 file explorer 的 refresh 可以重新加载config文件，然后刷新整个file explorer

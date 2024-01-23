@@ -1,3 +1,33 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── .vscodeignore
+├── LICENSE.txt
+├── README.md
+├── config.yml
+├── example
+│   ├── config.yml
+│   └── template
+│       └── new-feature.md
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+├── package.json
+└── webpack.config.js
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -15,6 +45,9 @@ class FileExplorer {
 
         // 注册一个命令，当用户选择文件时触发
         context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.selectFiles', () => this.getSelectedFiles()));
+        context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.openFile', (filePath) => {
+            this.treeDataProvider.openFile(filePath);
+        }));
     }
 
     refresh() {
@@ -119,6 +152,7 @@ class FileSystemProvider {
 
     getTreeItem(element) {
         element.id =  element.resourceUri.fsPath;
+        element.command = { command: 'fileExplorer.openFile', title: "Open File", arguments: [element.resourceUri.fsPath] };
         return element;
     }
 
@@ -431,3 +465,239 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "prompt-context-builder-plugin",
+	"description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
+	"version": "0.0.5",
+	"publisher": "jtong",
+	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"configuration": {
+			"title": "Prompt Context Builder Configuration",
+			"properties": {
+				"promptContextBuilderPlugin.openAIKey": {
+					"type": "string",
+					"default": "",
+					"description": "OpenAI API Key for prompt-context-builder-plugin."
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "extension.helloWorld",
+				"title": "Hello World"
+			},
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Related Files"
+			},
+			{
+				"command": "fileExplorer.openFile",
+				"title": "Open Explorer File"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "templateFile.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "fileExplorer.refresh",
+					"when": "view == fileExplorer",
+					"group": "navigation"
+				},
+				{
+					"command": "templateFile.refresh",
+					"when": "view == templateFiles",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"package": "webpack --mode development"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0",
+		"webpack": "^5.89.0",
+		"webpack-cli": "^5.1.4"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.8"
+	}
+}
+
+```            
+
+## 外部依赖：
+
+### prompt_context_builder 包的index.js
+
+```js
+module.exports = {
+    import_read : require("./import_read"),
+    read_controller: require("./read_controller"),
+    read_model: require("./read_model"),
+    folder_tree: require("./read_folder"),
+    related_java_class_analysis: require("./related_java_class_analysis"),
+    resolve_java_class_full_name: require("./resolve_java_class_full_name"),
+    prompt_render: require("prompt_render")
+}
+```
+
+### prompt_context_builder 的包中的 prompt_render 函数
+
+```js
+const Handlebars = require('handlebars');
+const yaml = require('js-yaml');
+const fs = require('fs');
+const path = require('path');
+const read_folder_tree = require('./read_folder');
+const read_related_files = require('./related_files.js');
+
+/**
+ * 解析并渲染模板
+ * @param {string} templateText - 模板文本
+ * @param {string} configPath - 配置文件路径
+ * @param {string} contextPath - 上下文文件路径
+ * @return {string} 渲染后的内容
+ */
+function renderTemplate(templateText, configPath, contextPath, baseDir) {
+    // 解析路径（如果传入的是相对路径）
+    const resolvedConfigPath = path.resolve(baseDir, configPath);
+    // 读取并解析配置文件
+
+    const configContent = fs.readFileSync(resolvedConfigPath, 'utf8');
+    const config = yaml.load(configContent);
+    let project = config.project;
+
+    project.base_path = path.resolve(baseDir, project.base_path);
+
+    // console.log(project.base_path)
+
+    // 定义内部上下文
+    // 注册 Handlebars 助手
+    Handlebars.registerHelper('folder_tree', function() {
+        return new Handlebars.SafeString(read_folder_tree(project));
+    });
+
+    Handlebars.registerHelper('related_files', function() {
+        const resolvedContextPath = path.resolve(baseDir, contextPath);
+        const contextContent = fs.readFileSync(resolvedContextPath, 'utf8');
+        const contextData = yaml.load(contextContent);
+        return new Handlebars.SafeString(read_related_files(project.base_path, contextData));
+    });
+
+    Handlebars.registerHelper('related_files_from', function(options) {
+        const templateString = options.fn(this);
+        let trimmedString = templateString.trim();
+        if (trimmedString.startsWith("```")) {
+            const firstNewLineIndex = trimmedString.indexOf('\n') + 1;
+            const lastNewLineIndex = trimmedString.lastIndexOf('\n');
+            trimmedString = trimmedString.substring(firstNewLineIndex, lastNewLineIndex);
+        }
+        const contextData = yaml.load(trimmedString);
+        return new Handlebars.SafeString(read_related_files(project.base_path, contextData));
+    });
+
+    // 使用 Handlebars 编译和渲染模板
+    const template = Handlebars.compile(templateText);
+    return template({ data: {} });
+}
+
+module.exports = renderTemplate;
+```
+
+调用代码：
+
+```js
+    const renderedContent = renderTemplate(templateContent, configPath, contextPath, baseDir);
+```
+
+## 任务
+
+我希望添加一个命令可以将当前打开的文件调用prompt-context-builder里的函数生成文本并输出到文件，文件输出路径可能定义在config.yml中:
+
+```yaml
+project:
+  base_path: ./
+  ignore:
+    path:
+      - target
+      - .idea
+      - .mvn
+      - prompt
+      - prompt-builder
+      - .git
+      - ai_helper
+      - node_modules
+      - spike
+    file:
+      - .DS_Store
+input:
+  prompt_template:
+    path: ai_helper/prompt_builder/template    
+  relative_files:
+    path: ai_helper/prompt_builder/relative_files.html
+    template: >
+      ```yaml
+        
+      ```           
+output:     
+  prompt:
+    path: ai_helper/prompt_builder/output/
+```
+
+读取其中 output/prompt/path 的内容作为输出路径。输出的时候，按照当前editor的文件文件名作为前缀，并且在后面加上数字后缀，输出到该输出路径中。数字后缀的计算按照输出路径里前缀相同的文件里数字后缀最大的向后+1。
+另外：调用related_files时，如果存在 input/relative_files/path 则传进来来，否则就传个空让他报错。

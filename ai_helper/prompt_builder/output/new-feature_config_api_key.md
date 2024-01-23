@@ -1,3 +1,36 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── .vscodeignore
+├── LICENSE.txt
+├── README.md
+├── config.yml
+├── dist
+│   ├── extension.js
+│   └── extension.js.map
+├── example
+│   ├── config.yml
+│   └── template
+│       └── new-feature.md
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+├── package.json
+└── webpack.config.js
+
+```
+
+## 相关文件
+
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -15,11 +48,13 @@ class FileExplorer {
 
         // 注册一个命令，当用户选择文件时触发
         context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.selectFiles', () => this.getSelectedFiles()));
+        context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.openFile', (filePath) => {
+            this.treeDataProvider.openFile(filePath);
+        }));
     }
 
     refresh() {
         this.treeDataProvider.refresh();
-        
     }
 
 
@@ -97,7 +132,6 @@ class FileSystemProvider {
     }
 
     refresh() {
-        this.config = this.readConfig();
         this._onDidChangeTreeData.fire(null);
     }
 
@@ -119,6 +153,7 @@ class FileSystemProvider {
 
     getTreeItem(element) {
         element.id =  element.resourceUri.fsPath;
+        element.command = { command: 'fileExplorer.openFile', title: "Open File", arguments: [element.resourceUri.fsPath] };
         return element;
     }
 
@@ -185,8 +220,11 @@ class FileSystemProvider {
 
         return fs.readdirSync(dir).filter(file => {
             const filePath = path.join(dir, file);
-            return !this.config.project.ignore.path.includes(file) 
-                    && !this.config.project.ignore.file.includes(file);
+            if (fs.statSync(filePath).isDirectory()) {
+                return !this.config.project.ignore.path.includes(file);
+            } else {
+                return !this.config.project.ignore.file.includes(file);
+            }
         }).map(file => {
             const filePath = path.join(dir, file);
             const stat = fs.statSync(filePath);
@@ -391,38 +429,6 @@ function activate(context) {
 
     context.subscriptions.push(vscode.commands.registerCommand('generatePromptOutput', generatePromptOutput));
 
-
-
-    let openAIKey = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('openAIKey');
-    // 使用密钥做一些事情，例如初始化您的功能
-    if (openAIKey) {
-        // 初始化带有密钥的功能
-        console.log(openAIKey);
-        vscode.window.showWarningMessage(openAIKey);
-
-    } else {
-        vscode.window.showWarningMessage('OpenAI API Key is not set. Please configure it in the settings.');
-    }
-
-    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
-        if (e.affectsConfiguration('promptContextBuilderPlugin.openAIKey')) {
-            // 重新读取配置
-            openAIKey = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('openAIKey');
-            
-            // 更新您的扩展以使用新的配置
-            // 例如，重新初始化需要 API 密钥的功能
-
-            if (openAIKey) {
-                // 使用新的密钥重新初始化功能
-                console.log(openAIKey)
-                vscode.window.showWarningMessage(openAIKey);
-
-            } else {
-                vscode.window.showWarningMessage('OpenAI API Key is not set. Please configure it in the settings.');
-            }
-        }
-    }));
-
 }
 
 function deactivate() { }
@@ -431,3 +437,107 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+### package.json
+
+```
+{
+	"name": "prompt-context-builder-plugin",
+	"description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
+	"version": "0.0.4",
+	"publisher": "jtong",
+	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Related Files"
+			},
+			{
+				"command": "fileExplorer.openFile",
+				"title": "Open Explorer File"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "templateFile.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "fileExplorer.refresh",
+					"when": "view == fileExplorer",
+					"group": "navigation"
+				},
+				{
+					"command": "templateFile.refresh",
+					"when": "view == templateFiles",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"package": "webpack --mode development"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0",
+		"webpack": "^5.89.0",
+		"webpack-cli": "^5.1.4"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.8"
+	}
+}
+
+```            
+
+## 任务
+
+我希望 支持配置项设置，主要是设置openAI的key。
