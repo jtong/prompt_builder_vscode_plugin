@@ -1,3 +1,141 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .vscode
+│   └── launch.json
+├── .vscodeignore
+├── LICENSE.txt
+├── README.md
+├── config.yml
+├── example
+│   ├── config.yml
+│   └── template
+│       └── new-feature.md
+├── extension.js
+├── media
+│   └── custom-explorer-icon.png
+├── package-lock.json
+├── package.json
+└── webpack.config.js
+
+```
+
+## 相关文件
+
+### package.json
+
+```
+{
+	"name": "prompt-context-builder-plugin",
+	"description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
+	"version": "0.0.5",
+	"publisher": "jtong",
+	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"configuration": {
+			"title": "Prompt Context Builder Configuration",
+			"properties": {
+				"promptContextBuilderPlugin.openAIKey": {
+					"type": "string",
+					"default": "",
+					"description": "OpenAI API Key for prompt-context-builder-plugin."
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "extension.helloWorld",
+				"title": "Hello World"
+			},
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Related Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "templateFile.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "fileExplorer.refresh",
+					"when": "view == fileExplorer",
+					"group": "navigation"
+				},
+				{
+					"command": "templateFile.refresh",
+					"when": "view == templateFiles",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"package": "webpack --mode development"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0",
+		"webpack": "^5.89.0",
+		"webpack-cli": "^5.1.4"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.0.8"
+	}
+}
+
+```            
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -15,9 +153,6 @@ class FileExplorer {
 
         // 注册一个命令，当用户选择文件时触发
         context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.selectFiles', () => this.getSelectedFiles()));
-        context.subscriptions.push(vscode.commands.registerCommand('fileExplorer.generateRelatedFiles', () => {
-            this.generateRelatedFiles();
-        }));
     }
 
     refresh() {
@@ -25,7 +160,9 @@ class FileExplorer {
         
     }
 
-    getSelectedFilesYaml() {
+
+    getSelectedFiles() {
+        // 从 fileExplorer 获取选中的文件
         const fileExplorerSelected = this.treeView.selection
         .filter(file => fs.statSync(file.resourceUri.fsPath).isFile())
         .map(file => file.resourceUri.fsPath);
@@ -41,30 +178,12 @@ class FileExplorer {
         // 转换为相对于工作区的路径
         const relativePaths = selectedFiles.map(file => path.relative(workspaceRoot, file));
 
-
         console.log("Selected Files (Relative Paths):", relativePaths);
         vscode.window.showInformationMessage(`Selected Files: ${relativePaths.join(', ')}`);
         recentFilesProvider.updateRecentFiles(relativePaths);
 
         const ymlContent = this.generateYmlContent(relativePaths);
-        return ymlContent;
-    }
-
-    getSelectedFiles() {
-        const yamlContent = this.getSelectedFilesYaml();
-
-        const templateContent = this.readTemplate();
-        const template = Handlebars.compile(templateContent);
-        const templatedContet = template({ content: ymlContent });
-
-        this.insertTextToEditor(templatedContet);
-    }
-
-
-
-    generateRelatedFiles() {
-        const yamlContent = this.getSelectedFilesYaml();
-        this.insertTextToEditor(yamlContent);
+        this.insertTextToEditor(ymlContent);
     }
 
     insertTextToEditor(text) {
@@ -94,6 +213,8 @@ class FileExplorer {
     }
 
     generateYmlContent(relativePaths) {
+        const templateContent = this.readTemplate();
+        const template = Handlebars.compile(templateContent);
 
         const ymlArray = relativePaths.map(path => ({
             path: path,
@@ -101,7 +222,8 @@ class FileExplorer {
         }));
 
         const content = yaml.dump(ymlArray);
-        return content;
+
+        return template({ content: content });
     }
 }
 
@@ -447,3 +569,10 @@ module.exports = {
     activate,
     deactivate
 };
+
+```            
+
+## 任务
+
+我希望 添加一个新的命令，参考fileExplorer.selectFiles，可以生成纯related files，而不套模版。
+

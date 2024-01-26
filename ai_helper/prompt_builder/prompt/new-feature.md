@@ -19,4 +19,5 @@
 
 ## 任务
 
-我希望 点击 file explorer 的 refresh 可以重新加载config文件，然后刷新整个file explorer
+我希望 添加一个新的命令，参考fileExplorer.selectFiles，可以生成纯related files，而不套模版。
+

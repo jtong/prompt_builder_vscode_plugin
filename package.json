@@ -44,6 +44,10 @@
 			{
 				"command": "generatePromptOutput",
 				"title": "Generate Prompt Output"
+			},
+			{
+				"command": "fileExplorer.generateRelatedFiles",
+				"title": "Pure Related Files"
 			}
 		],
 		"viewsContainers": {
