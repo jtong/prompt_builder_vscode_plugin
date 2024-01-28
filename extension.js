@@ -51,7 +51,7 @@ class FileExplorer {
     }
 
     getSelectedFiles() {
-        const yamlContent = this.getSelectedFilesYaml();
+        const ymlContent = this.getSelectedFilesYaml();
 
         const templateContent = this.readTemplate();
         const template = Handlebars.compile(templateContent);
