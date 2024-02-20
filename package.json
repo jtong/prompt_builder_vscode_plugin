@@ -1,7 +1,7 @@
 {
 	"name": "prompt-context-builder-plugin",
 	"description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"publisher": "jtong",
 	"icon": "media/custom-explorer-icon.png",
 	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
@@ -104,6 +104,6 @@
 	"dependencies": {
 		"handlebars": "^4.7.8",
 		"js-yaml": "^4.1.0",
-		"prompt-context-builder": "^1.0.8"
+		"prompt-context-builder": "^1.0.9"
 	}
 }
