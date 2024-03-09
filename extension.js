@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const yaml = require('js-yaml'); // 需要添加对js-yaml的依赖
 const Handlebars = require('handlebars');
-const { prompt_render } = require('prompt-context-builder');
+const { prompt_render, folder_tree } = require('prompt-context-builder');
 
 let recentFilesProvider;
 
@@ -126,7 +126,9 @@ class FileSystemProvider {
         try {
             const configPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'config.yml');
             const configFile = fs.readFileSync(configPath, 'utf8');
-            return yaml.load(configFile);
+            const config =  yaml.load(configFile);
+            config.project.base_path = path.resolve(vscode.workspace.workspaceFolders[0].uri.fsPath, config.project.base_path);
+            return config;
         } catch (error) {
             console.error('Error reading config.yml:', error);
             return null;
@@ -193,21 +195,45 @@ class FileSystemProvider {
     }
 
     getFiles(dir) {
-        if (!this.config) return fs.readdirSync(dir).map(file => {
-            const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
-            return new vscode.TreeItem(vscode.Uri.file(filePath), stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-        });
+        if (!this.config) return [];
 
-        return fs.readdirSync(dir).filter(file => {
-            const filePath = path.join(dir, file);
-            return !this.config.project.ignore.path.includes(file) 
-                    && !this.config.project.ignore.file.includes(file);
-        }).map(file => {
-            const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
-            return new vscode.TreeItem(vscode.Uri.file(filePath), stat.isDirectory() ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-        });
+        const jsonResult = {};
+        folder_tree(this.config.project, jsonResult);
+
+        const result =  this.convertJsonResultToTreeItems(jsonResult, dir);
+        
+        return result;
+    }
+
+    convertJsonResultToTreeItems(jsonResult, dir) {
+        const treeItems = [];
+        const basePath = this.config.project.base_path;
+    
+        function traverse(obj, currentPath) {
+            const currentFullPath = path.join(basePath, currentPath);
+    
+            if (currentFullPath === dir) {
+                if (obj.children) {
+                    obj.children.forEach(child => {
+                        const childPath = path.join(currentPath, child.name);
+                        const treeItem = new vscode.TreeItem(
+                            child.name,
+                            child.isDirectory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
+                        );
+                        treeItem.resourceUri = vscode.Uri.file(path.join(basePath, childPath));
+                        treeItems.push(treeItem);
+                    });
+                }
+                return;
+            }
+    
+            if (obj.children) {
+                obj.children.forEach(child => traverse(child, path.join(currentPath, child.name)));
+            }
+        }
+    
+        traverse(jsonResult, '');
+        return treeItems;
     }
 }
 
