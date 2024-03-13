@@ -3,7 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const yaml = require('js-yaml'); // 需要添加对js-yaml的依赖
 const Handlebars = require('handlebars');
-const { prompt_render, folder_tree } = require('prompt-context-builder');
+const git = require('isomorphic-git');
+const http = require('isomorphic-git/http/node');
+const url = require('url');
+
+const { prompt_render, folder_tree, prompt_render_with_config_object } = require('prompt-context-builder');
 
 let recentFilesProvider;
 
@@ -22,13 +26,13 @@ class FileExplorer {
 
     refresh() {
         this.treeDataProvider.refresh();
-        
+
     }
 
     getSelectedFilesYaml() {
         const fileExplorerSelected = this.treeView.selection
-        .filter(file => fs.statSync(file.resourceUri.fsPath).isFile())
-        .map(file => file.resourceUri.fsPath);
+            .filter(file => fs.statSync(file.resourceUri.fsPath).isFile())
+            .map(file => file.resourceUri.fsPath);
         // 获取工作区根路径
         const workspaceRoot = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
 
@@ -126,7 +130,7 @@ class FileSystemProvider {
         try {
             const configPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'config.yml');
             const configFile = fs.readFileSync(configPath, 'utf8');
-            const config =  yaml.load(configFile);
+            const config = yaml.load(configFile);
             config.project.base_path = path.resolve(vscode.workspace.workspaceFolders[0].uri.fsPath, config.project.base_path);
             return config;
         } catch (error) {
@@ -136,7 +140,7 @@ class FileSystemProvider {
     }
 
     getTreeItem(element) {
-        element.id =  element.resourceUri.fsPath;
+        element.id = element.resourceUri.fsPath;
         return element;
     }
 
@@ -200,18 +204,18 @@ class FileSystemProvider {
         const jsonResult = {};
         folder_tree(this.config.project, jsonResult);
 
-        const result =  this.convertJsonResultToTreeItems(jsonResult, dir);
-        
+        const result = this.convertJsonResultToTreeItems(jsonResult, dir);
+
         return result;
     }
 
     convertJsonResultToTreeItems(jsonResult, dir) {
         const treeItems = [];
         const basePath = this.config.project.base_path;
-    
+
         function traverse(obj, currentPath) {
             const currentFullPath = path.join(basePath, currentPath);
-    
+
             if (currentFullPath === dir) {
                 if (obj.children) {
                     obj.children.forEach(child => {
@@ -226,12 +230,12 @@ class FileSystemProvider {
                 }
                 return;
             }
-    
+
             if (obj.children) {
                 obj.children.forEach(child => traverse(child, path.join(currentPath, child.name)));
             }
         }
-    
+
         traverse(jsonResult, '');
         return treeItems;
     }
@@ -290,22 +294,22 @@ class RecentFilesProvider {
         files.forEach(relativePath => {
             // 转换为绝对路径
             const absolutePath = path.join(workspaceRoot, relativePath);
-    
+
             // 确保路径指向文件而非文件夹
             if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
                 // 移除重复项
                 this.recentFiles = this.recentFiles.filter(recentFile => recentFile !== relativePath);
-    
+
                 // 添加到列表开头
                 this.recentFiles.unshift(relativePath);
-    
+
                 // 保持列表在最大数量限制之内
                 if (this.recentFiles.length > this.maxFiles) {
                     this.recentFiles.pop();
                 }
             }
         });
-    
+
         this._onDidChangeTreeData.fire();
     }
 }
@@ -317,7 +321,7 @@ class TemplateFilesProvider {
         this.onDidChangeTreeData = this._onDidChangeTreeData.event;
         this.templatePath = this.getTemplatePath();
     }
-    
+
     refresh() {
         this.templatePath = this.getTemplatePath();
         this._onDidChangeTreeData.fire(null);
@@ -356,7 +360,7 @@ class TemplateFilesProvider {
                 path: path.join(templateDir, file),
                 mtime: fs.statSync(path.join(templateDir, file)).mtime
             }))
-            .sort((a, b) =>  a.mtime - b.mtime) // 按最近修改日期排序
+            .sort((a, b) => a.mtime - b.mtime) // 按最近修改日期排序
             .map(file => file.name);
     }
 }
@@ -415,10 +419,89 @@ function createOutputFilePath(outputDir, fileNamePrefix, extension) {
     return outputFile;
 }
 
+async function generateAllCodeContext() {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+        vscode.window.showWarningMessage('No active editor found');
+        return;
+    }
+
+    const currentFilePath = activeEditor.document.uri.fsPath;
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    const config = yaml.load(fs.readFileSync(currentFilePath, 'utf8'));
+
+    let project_base_path = workspaceRoot;
+    let outputFilePrefix = path.basename(workspaceRoot);
+    if (config.project && config.project.type === 'git') {
+        const gitRepoPath = path.join(workspaceRoot, config.input.git_clone_to_path || 'git_repo');
+        const gitRepoUrl = config.project.base_path;
+        const repoName = path.basename(url.parse(gitRepoUrl).pathname, '.git');
+        const repoDir = path.join(gitRepoPath, repoName);
+
+        const shouldSkipClone = fs.existsSync(repoDir) && config.input.skip_clone_if_folder_exist;
+
+        if (shouldSkipClone) {
+            vscode.window.showWarningMessage(`Skipping Git clone, the target directory "${repoDir}" already exists. Please be aware of potential file name conflicts.`);
+        } else {
+            try {
+                await git.clone({
+                    fs,
+                    http,
+                    dir: repoDir,
+                    url: gitRepoUrl,
+                    depth: 1,
+                });
+            } catch (err) {
+                vscode.window.showErrorMessage(`Failed to clone Git repository: ${err}`);
+                return;
+            }
+        }
+
+        project_base_path = repoDir;
+        outputFilePrefix = repoName;
+    } else if (config.project && config.project.base_path) {
+        project_base_path = path.resolve(workspaceRoot, config.project.base_path);
+        outputFilePrefix = path.basename(project_base_path);
+    }
+
+    const template = `请基于 Project 里的代码， 完成下面的 Instruction
+
+<Project>
+<folder_tree>
+{{ folder_tree }}
+</folder_tree>
+<files>
+{{ all_files_xml }}
+</files>
+</Project>
+
+<Instruction>
+{{#if config.instruction}}
+{{{config.instruction}}}
+{{else}}
+我们正在测试\`all_files_xml\`助手。
+具体任务：无
+{{/if}}
+</Instruction>
+`;
+
+    config.project.base_path = project_base_path;
+    const renderedContent = prompt_render_with_config_object(template, config, '', project_base_path);
+
+    const outputDir = path.resolve(workspaceRoot, config.output.prompt.path);
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const outputFile = createOutputFilePath(outputDir, outputFilePrefix, '.xml');
+    fs.writeFileSync(outputFile, renderedContent);
+    vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
+}
+
 function activate(context) {
 
     recentFilesProvider = new RecentFilesProvider();
-    const fileExplorer=new FileExplorer(context);
+    const fileExplorer = new FileExplorer(context);
 
 
     const recentFilesTreeView = vscode.window.createTreeView('recentFiles', { treeDataProvider: recentFilesProvider, canSelectMany: true });
@@ -443,8 +526,7 @@ function activate(context) {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('generatePromptOutput', generatePromptOutput));
-
-
+    context.subscriptions.push(vscode.commands.registerCommand('generateAllCodeContext', generateAllCodeContext));
 
     let openAIKey = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('openAIKey');
     // 使用密钥做一些事情，例如初始化您的功能
@@ -461,7 +543,7 @@ function activate(context) {
         if (e.affectsConfiguration('promptContextBuilderPlugin.openAIKey')) {
             // 重新读取配置
             openAIKey = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('openAIKey');
-            
+
             // 更新您的扩展以使用新的配置
             // 例如，重新初始化需要 API 密钥的功能
 
