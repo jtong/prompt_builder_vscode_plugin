@@ -437,7 +437,7 @@ async function generateAllCodeContext() {
         const gitRepoUrl = config.project.base_path;
         const repoName = path.basename(url.parse(gitRepoUrl).pathname, '.git');
         const repoDir = path.join(gitRepoPath, repoName);
-
+        
         const shouldSkipClone = fs.existsSync(repoDir) && config.input.skip_clone_if_folder_exist;
 
         if (shouldSkipClone) {
@@ -476,12 +476,7 @@ async function generateAllCodeContext() {
 </Project>
 
 <Instruction>
-{{#if config.instruction}}
-{{{config.instruction}}}
-{{else}}
-我们正在测试\`all_files_xml\`助手。
-具体任务：无
-{{/if}}
+${ config.input.instruction || ""}
 </Instruction>
 `;
 
