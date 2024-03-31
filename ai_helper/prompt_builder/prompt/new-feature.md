@@ -19,5 +19,4 @@
 
 ## 任务
 
-我希望 添加一个新的命令，参考fileExplorer.selectFiles，可以生成纯related files，而不套模版。
-
+我希望 generateOutputToClipboard 有三种能力： 不输出、输出文本到剪切板、输出已经拷贝的文件到剪切板，
