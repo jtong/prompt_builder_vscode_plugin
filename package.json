@@ -12,7 +12,7 @@
 	"categories": [
 		"Machine Learning"
 	],
-	"main": "./extension.js",
+	"main": "./dist/extension.js",
 	"contributes": {
 		"configuration": {
 			"title": "Prompt Context Builder Configuration",

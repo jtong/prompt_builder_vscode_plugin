@@ -416,11 +416,12 @@ async function generatePromptOutput() {
         case 'text':
             // 输出文本到剪切板
             vscode.env.clipboard.writeText(renderedContent);
-            vscode.window.showInformationMessage('Prompt output copied to clipboard'); break;
+            vscode.window.showInformationMessage('Prompt output copied to clipboard'); 
+            break;
         case 'path':
             // 输出已经拷贝的文件路径到剪切板            
             vscode.env.clipboard.writeText(outputFile);
-            vscode.window.showInformationMessage('Prompt output copied to clipboard');
+            vscode.window.showInformationMessage('Prompt filepath copied to clipboard');
             break;
     }
 }
@@ -516,11 +517,12 @@ ${config.input.instruction || ""}
         case 'text':
             // 输出文本到剪切板
             vscode.env.clipboard.writeText(renderedContent);
-            vscode.window.showInformationMessage('Prompt output copied to clipboard'); break;
+            vscode.window.showInformationMessage('Prompt output copied to clipboard');
+            break;
         case 'path':
             // 输出已经拷贝的文件路径到剪切板            
             vscode.env.clipboard.writeText(outputFile);
-            vscode.window.showInformationMessage('Prompt output copied to clipboard');
+            vscode.window.showInformationMessage('Prompt filepath copied to clipboard');
             break;
     }
 }
