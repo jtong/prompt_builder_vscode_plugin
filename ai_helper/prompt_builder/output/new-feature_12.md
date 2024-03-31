@@ -1,3 +1,157 @@
+## 技术上下文
+
+我们在开发一个 vscode 插件，其工程的文件夹树形结构如下：
+
+```
+.
+├── .gitignore
+├── .vscode
+│   └── launch.json
+├── .vscodeignore
+├── LICENSE.txt
+├── README.md
+├── config.yml
+├── example
+│   ├── config.yml
+│   └── template
+│       └── new-feature.md
+├── extension.js
+├── package-lock.json
+├── package.json
+└── webpack.config.js
+
+```
+
+## 相关文件
+
+### package.json
+
+```
+{
+	"name": "prompt-context-builder-plugin",
+	"description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
+	"version": "0.1.4",
+	"publisher": "jtong",
+	"icon": "media/custom-explorer-icon.png",
+	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"categories": [
+		"Machine Learning"
+	],
+	"main": "./extension.js",
+	"contributes": {
+		"configuration": {
+			"title": "Prompt Context Builder Configuration",
+			"properties": {
+				"promptContextBuilderPlugin.generateOutputToClipboard": {
+					"type": "string",
+					"enum": [
+						"none",
+						"text",
+						"path"
+					],
+					"default": "text",
+					"description": "Whether to copy the output to clipboard. 'none' for no output, 'text' for text output, 'path' for copied file path."
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "extension.helloWorld",
+				"title": "Hello World"
+			},
+			{
+				"command": "fileExplorer.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "fileExplorer.selectFiles",
+				"title": "Related Files"
+			},
+			{
+				"command": "templateFile.openFile",
+				"title": "Open Template File"
+			},
+			{
+				"command": "templateFile.refresh",
+				"title": "Refresh"
+			},
+			{
+				"command": "generatePromptOutput",
+				"title": "Generate Prompt Output"
+			},
+			{
+				"command": "fileExplorer.generateRelatedFiles",
+				"title": "Pure Related Files"
+			},
+			{
+				"command": "generateAllCodeContext",
+				"title": "Generate All Code Context"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileExplorer",
+					"title": "Custom Explorer",
+					"icon": "media/custom-explorer-icon.png"
+				}
+			]
+		},
+		"views": {
+			"fileExplorer": [
+				{
+					"id": "fileExplorer",
+					"name": "Files",
+					"canSelectMany": true
+				},
+				{
+					"id": "recentFiles",
+					"name": "Recent Files"
+				},
+				{
+					"id": "templateFiles",
+					"name": "Template Files"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "fileExplorer.refresh",
+					"when": "view == fileExplorer",
+					"group": "navigation"
+				},
+				{
+					"command": "templateFile.refresh",
+					"when": "view == templateFiles",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"package": "webpack --mode development"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.73.0",
+		"webpack": "^5.89.0",
+		"webpack-cli": "^5.1.4"
+	},
+	"dependencies": {
+		"handlebars": "^4.7.8",
+		"isomorphic-git": "^1.25.6",
+		"js-yaml": "^4.1.0",
+		"prompt-context-builder": "^1.1.5"
+	}
+}
+```            
+### extension.js
+
+```
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
@@ -416,7 +570,7 @@ async function generatePromptOutput() {
         case 'text':
             // 输出文本到剪切板
             vscode.env.clipboard.writeText(renderedContent);
-            vscode.window.showInformationMessage('Prompt output copied to clipboard');
+            vscode.window.showInformationMessage('Prompt output copied to clipboard'); 
             break;
         case 'path':
             // 输出已经拷贝的文件路径到剪切板            
@@ -488,7 +642,7 @@ async function generateAllCodeContext() {
     }
     const renderedInstruction = prompt_render_with_config_object(instruction, config, '', project_base_path);
 
-    const XML_TEMPLATE = `请基于 Project 里的代码， 完成下面的 Instruction
+    const template = `请基于 Project 里的代码， 完成下面的 Instruction
 
 <Project>
 <folder_tree>
@@ -503,41 +657,7 @@ async function generateAllCodeContext() {
 ${renderedInstruction}
 </Instruction>
 `;
-    const MARKDOWN_TEMPLATE = `请基于 “项目文件夹树”结构 和 “项目内文件” 里的代码， 完成下面的 “任务”
 
-## 项目文件夹树
-
-\`\`\`
-{{ folder_tree }}
-\`\`\`
-
-## 项目内文件
-
-{{ all_files_markdown }}
-
-## 任务
-
-${renderedInstruction}`
-
-    let template = XML_TEMPLATE;
-    let extentions_name = ".xml";
-    if (config.input && config.input.instruction_template) {
-        // 优先使用自定义模板
-        template = config.input.instruction_template;
-    } else {
-        // 根据配置选择内置模板
-        const tempalte_option = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('generateAllTemplate');
-        switch (tempalte_option) {
-            case 'xml':
-                template = XML_TEMPLATE;
-                extentions_name = ".xml";
-                break;
-            case 'markdown':
-                template = MARKDOWN_TEMPLATE;
-                extentions_name = ".md";
-                break;
-        }
-    }
     const renderedContent = prompt_render_with_config_object(template, config, '', project_base_path);
 
     const outputDir = path.resolve(workspaceRoot, config.output.prompt.path);
@@ -545,7 +665,7 @@ ${renderedInstruction}`
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const outputFile = createOutputFilePath(outputDir, outputFilePrefix, extentions_name);
+    const outputFile = createOutputFilePath(outputDir, outputFilePrefix, '.xml');
     fs.writeFileSync(outputFile, renderedContent);
     vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
 
@@ -605,3 +725,8 @@ module.exports = {
     activate,
     deactivate
 };
+```            
+
+## 任务
+
+我希望 generateAllCodeContext 的模版有多个版本，可以在config里配置

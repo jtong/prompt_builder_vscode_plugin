@@ -19,4 +19,4 @@
 
 ## 任务
 
-我希望 generateAllCodeContext 命令里面的 instruction 也可以经过 prompt_render_with_config_object 后，再并入tempalte
+我希望 generateAllCodeContext 的模版有多个版本，可以在config里配置
