@@ -19,4 +19,4 @@
 
 ## 任务
 
-我希望 generateOutputToClipboard 有三种能力： 不输出、输出文本到剪切板、输出已经拷贝的文件到剪切板，
+我希望 generateAllCodeContext 命令里面的 instruction 也可以经过 prompt_render_with_config_object 后，再并入tempalte
