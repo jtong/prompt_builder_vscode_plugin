@@ -404,10 +404,25 @@ async function generatePromptOutput() {
     // 创建输出文件
     const fileNamePrefix = path.basename(currentFilePath, path.extname(currentFilePath));
     const templateExtension = path.extname(currentFilePath); // 获取模板文件的扩展名
-    const outputFile = createOutputFilePath(outputDir, fileNamePrefix, templateExtension);
+
+    const outputFile = path.join(outputDir, `context.txt`);
     fs.writeFileSync(outputFile, renderedContent);
     vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
 
+    if (config.output.prompt.backup_path) {
+        // 输出备份文件路径
+        const backupOutputDir = path.join(workspaceRoot, config.output.prompt.backup_path);
+        if (!fs.existsSync(backupOutputDir)) {
+            fs.mkdirSync(backupOutputDir, { recursive: true });
+        }
+
+        //backup
+        const backupOutputFilePath = createBackupOutputFilePath(backupOutputDir, fileNamePrefix, templateExtension);
+        fs.writeFileSync(backupOutputFilePath, renderedContent);
+
+        vscode.window.showInformationMessage(`Backup Output generated at ${backupOutputFilePath}`);
+    }
+    
     let outputMode = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('generateOutputToClipboard');
     switch (outputMode) {
         case 'none':
@@ -426,7 +441,7 @@ async function generatePromptOutput() {
     }
 }
 
-function createOutputFilePath(outputDir, fileNamePrefix, extension) {
+function createBackupOutputFilePath(outputDir, fileNamePrefix, extension) {
     let suffix = 1;
     let outputFile;
     do {
@@ -540,14 +555,28 @@ ${renderedInstruction}`
     }
     const renderedContent = prompt_render_with_config_object(template, config, '', project_base_path);
 
-    const outputDir = path.resolve(workspaceRoot, config.output.prompt.path);
+    // 输出文件路径
+    const outputDir = path.join(workspaceRoot, config.output.prompt.path);
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
-
-    const outputFile = createOutputFilePath(outputDir, outputFilePrefix, extentions_name);
+    const outputFile = path.join(outputDir, `context.txt`);
     fs.writeFileSync(outputFile, renderedContent);
     vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
+    
+    if (config.output.prompt.backup_path) {
+        // 输出备份文件路径
+        const backupOutputDir = path.join(workspaceRoot, config.output.prompt.backup_path);
+        if (!fs.existsSync(backupOutputDir)) {
+            fs.mkdirSync(backupOutputDir, { recursive: true });
+        }
+
+        //backup
+        const backupOutputFilePath = createBackupOutputFilePath(backupOutputDir, outputFilePrefix, extentions_name);
+        fs.writeFileSync(backupOutputFilePath, renderedContent);
+
+        vscode.window.showInformationMessage(`Backup Output generated at ${backupOutputFilePath}`);
+    }
 
     let outputMode = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('generateOutputToClipboard');
     switch (outputMode) {

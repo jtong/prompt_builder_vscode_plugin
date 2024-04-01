@@ -1,0 +1,33 @@
+project:
+  base_path: ./
+  ignore:
+    path:
+      - target
+      - .idea
+      - .mvn
+      - prompt
+      - prompt-builder
+      - .git
+      - ai_helper
+      - node_modules
+      - spike
+      - dist
+      - media
+    file:
+      - .DS_Store
+input:
+  prompt_template:
+    path: ai_helper/prompt_builder/prompt    
+  relative_files:
+    template: >
+      ```yaml
+
+      {{{content}}}
+
+      ```
+  git_clone_to_path: ai_helper/git_repo
+  
+output:     
+  prompt:
+    path: ai_helper/prompt_builder/output/working
+    backup_path: ai_helper/prompt_builder/output/backup
