@@ -19,4 +19,4 @@
 
 ## 任务
 
-我希望 generateAllCodeContext 的模版有多个版本，可以在config里配置
+我希望 添加一个命令，他可以用POST发送一个HTTP请求去指定的URL。在body中放入一个json，里面有基于 config.project.base_path 的 output.prompt.path 的绝对路径，还有一段外面传入的字符串，并返回response。

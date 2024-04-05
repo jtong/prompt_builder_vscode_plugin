@@ -9,6 +9,8 @@ const url = require('url');
 
 const { prompt_render, folder_tree, prompt_render_with_config_object } = require('prompt-context-builder');
 
+const working_context_fileName = `context.txt`;
+
 let recentFilesProvider;
 
 class FileExplorer {
@@ -405,7 +407,7 @@ async function generatePromptOutput() {
     const fileNamePrefix = path.basename(currentFilePath, path.extname(currentFilePath));
     const templateExtension = path.extname(currentFilePath); // 获取模板文件的扩展名
 
-    const outputFile = path.join(outputDir, `context.txt`);
+    const outputFile = path.join(outputDir, working_context_fileName);
     fs.writeFileSync(outputFile, renderedContent);
     vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
 
@@ -422,7 +424,7 @@ async function generatePromptOutput() {
 
         vscode.window.showInformationMessage(`Backup Output generated at ${backupOutputFilePath}`);
     }
-    
+
     let outputMode = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('generateOutputToClipboard');
     switch (outputMode) {
         case 'none':
@@ -532,7 +534,8 @@ ${renderedInstruction}
 
 ## 任务
 
-${renderedInstruction}`
+${renderedInstruction}
+`
 
     let template = XML_TEMPLATE;
     let extentions_name = ".xml";
@@ -563,7 +566,7 @@ ${renderedInstruction}`
     const outputFile = path.join(outputDir, `context.txt`);
     fs.writeFileSync(outputFile, renderedContent);
     vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
-    
+
     if (config.output.prompt.backup_path) {
         // 输出备份文件路径
         const backupOutputDir = path.join(workspaceRoot, config.output.prompt.backup_path);
@@ -596,6 +599,34 @@ ${renderedInstruction}`
     }
 }
 
+const axios = require('axios');
+
+async function sendHttpRequest(text_prompt) {
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    const configPath = path.join(workspaceRoot, 'config.yml');
+    const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+
+    const promptPath = path.resolve(workspaceRoot, config.output.prompt.path, working_context_fileName);
+
+    const url = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('selectedHttpRequestUrl');
+
+    if (!url) {
+        vscode.window.showErrorMessage('Please configure the HTTP request URL in the extension settings.');
+        return;
+    }
+
+    try {
+        const response = await axios.post(url, {
+            filePath: promptPath,
+            text: text_prompt
+        });
+
+        vscode.window.showInformationMessage(`HTTP request sent successfully. Response: ${response.data}`);
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to send HTTP request: ${error.message}`);
+    }
+}
+
 function activate(context) {
 
     recentFilesProvider = new RecentFilesProvider();
@@ -625,6 +656,35 @@ function activate(context) {
 
     context.subscriptions.push(vscode.commands.registerCommand('generatePromptOutput', generatePromptOutput));
     context.subscriptions.push(vscode.commands.registerCommand('generateAllCodeContext', generateAllCodeContext));
+
+
+    context.subscriptions.push(vscode.commands.registerCommand('updateContext', async () => {
+        // vscode.window.showInformationMessage(vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('customOptions'));
+        const selectedUrl = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('selectedHttpRequestUrl');
+        if (!selectedUrl) {
+            const urlList = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('customUrlOptions', []);
+
+            // 如果 URL 列表为空,提示用户设置 URL
+            if (urlList.length === 0) {
+                vscode.window.showErrorMessage('Please configure the HTTP request URLs in the extension settings.');
+                return;
+            }
+
+            const selectedUrl = await vscode.window.showQuickPick(urlList, {
+                placeHolder: 'Select a URL to send the HTTP request'
+            });
+
+            // 如果用户取消了选择,则返回
+            if (!selectedUrl) {
+                return;
+            }
+
+            // 保存用户选择的 URL 到设置中
+            await vscode.workspace.getConfiguration('promptContextBuilderPlugin').update('selectedHttpRequestUrl', selectedUrl, vscode.ConfigurationTarget.Global);
+        }
+
+        await sendHttpRequest("完成任务");
+    }));
 
 }
 
