@@ -565,6 +565,8 @@ ${renderedInstruction}
     }
     const outputFile = path.join(outputDir, `context.txt`);
     fs.writeFileSync(outputFile, renderedContent);
+    const lineCount = renderedContent.split('\n').length;
+    vscode.window.showInformationMessage(`Total lines of Context: ${lineCount}`);
     vscode.window.showInformationMessage(`Output generated at ${outputFile}`);
 
     if (config.output.prompt.backup_path) {
