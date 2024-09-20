@@ -2,7 +2,7 @@
 	"name": "prompt-context-builder-plugin",
 	"displayName": "Prompt Context Builder",
     "description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"publisher": "jtong",
 	"icon": "media/custom-explorer-icon.png",
 	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
@@ -40,6 +40,10 @@
 			}
 		},
 		"commands": [
+            {
+                "command": "initializeConfigFile",
+                "title": "Init Config File"
+            },
 			{
 				"command": "generateAllCodeContext",
 				"title": "Generate All Code Context"

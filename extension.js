@@ -168,9 +168,53 @@ ${renderedInstruction}
 }
 
 
+function createUniqueFileName(dir, baseName, extension) {
+    let fileName = `${baseName}${extension}`;
+    let counter = 1;
+    while (fs.existsSync(path.join(dir, fileName))) {
+        fileName = `${baseName}_${counter}${extension}`;
+        counter++;
+    }
+    return fileName;
+}
+
+async function initializeConfigFile() {
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    const configFileName = createUniqueFileName(workspaceRoot, 'config', '.yaml');
+    const configFilePath = path.join(workspaceRoot, configFileName);
+
+    const initialConfig = `project:
+  base_path: ./ 
+  filters: 
+    - ignore:
+      - .git
+      - node_modules
+      - "config.yaml"
+input:
+  instruction: |
+    我希望 <在这加入你想实现的功能>
+output:     
+  prompt:
+    path: ai_helper/prompt_builder/output/working
+    backup_path: ai_helper/prompt_builder/output/backup
+# 写完指令后，按下 Ctrl+Shift+P 或者 CMD+Shift+P 执行我们的命令：Generate All Code Context。
+# 就可以在 ai_helper/prompt_builder/output/working 下看到我们的 context.txt 文件。
+# 然后在文件系统中，直接把context.txt拖拽到poe或claude等LLM的web输入框，敲击回车即可得到AI对愿望的响应。（如果是chatgpt的话，目前的版本你还需要把你得指令在文本框里再输入一遍，否则可能它不正确响应）
+`;
+
+    fs.writeFileSync(configFilePath, initialConfig);
+
+    const document = await vscode.workspace.openTextDocument(configFilePath);
+    await vscode.window.showTextDocument(document);
+
+    vscode.window.showInformationMessage(`Config file created and opened: ${configFileName}`);
+}
+
 function activate(context) {
 
     context.subscriptions.push(vscode.commands.registerCommand('generateAllCodeContext', generateAllCodeContext));
+    
+    context.subscriptions.push(vscode.commands.registerCommand('initializeConfigFile', initializeConfigFile));
 
     context.subscriptions.push(vscode.commands.registerCommand('updateContext', async () => {
         vscode.window.showInformationMessage(`In Development, Not Support Now`);
