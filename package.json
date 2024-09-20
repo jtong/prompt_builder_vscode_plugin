@@ -1,7 +1,8 @@
 {
 	"name": "prompt-context-builder-plugin",
-	"description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
-	"version": "0.2.3",
+	"displayName": "Prompt Context Builder",
+    "description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
+	"version": "0.2.4",
 	"publisher": "jtong",
 	"icon": "media/custom-explorer-icon.png",
 	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
@@ -17,19 +18,6 @@
 		"configuration": {
 			"title": "Prompt Context Builder Configuration",
 			"properties": {
-				"promptContextBuilderPlugin.selectedHttpRequestUrl": {
-					"type": "string",
-					"default": "",
-					"description": "The selected HTTP request URL"
-				},
-				"promptContextBuilderPlugin.customUrlOptions": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					},
-					"default": [],
-					"description": "Custom URL options that can be added at runtime"
-				},
 				"promptContextBuilderPlugin.generateOutputToClipboard": {
 					"type": "string",
 					"enum": [
@@ -53,30 +41,6 @@
 		},
 		"commands": [
 			{
-				"command": "fileExplorer.refresh",
-				"title": "Refresh"
-			},
-			{
-				"command": "fileExplorer.selectFiles",
-				"title": "Related Files"
-			},
-			{
-				"command": "templateFile.openFile",
-				"title": "Open Template File"
-			},
-			{
-				"command": "templateFile.refresh",
-				"title": "Refresh"
-			},
-			{
-				"command": "generatePromptOutput",
-				"title": "Generate Prompt Output"
-			},
-			{
-				"command": "fileExplorer.generateRelatedFiles",
-				"title": "Pure Related Files"
-			},
-			{
 				"command": "generateAllCodeContext",
 				"title": "Generate All Code Context"
 			},
@@ -87,42 +51,14 @@
 		],
 		"viewsContainers": {
 			"activitybar": [
-				{
-					"id": "fileExplorer",
-					"title": "Custom Explorer",
-					"icon": "media/custom-explorer-icon.png"
-				}
+
 			]
 		},
 		"views": {
-			"fileExplorer": [
-				{
-					"id": "fileExplorer",
-					"name": "Files",
-					"canSelectMany": true
-				},
-				{
-					"id": "recentFiles",
-					"name": "Recent Files"
-				},
-				{
-					"id": "templateFiles",
-					"name": "Template Files"
-				}
-			]
+			
 		},
 		"menus": {
 			"view/title": [
-				{
-					"command": "fileExplorer.refresh",
-					"when": "view == fileExplorer",
-					"group": "navigation"
-				},
-				{
-					"command": "templateFile.refresh",
-					"when": "view == templateFiles",
-					"group": "navigation"
-				}
 			]
 		}
 	},
