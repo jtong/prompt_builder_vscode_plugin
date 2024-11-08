@@ -1,3 +1,7 @@
+## 介绍
+
+这是一个通过配置文件快速得到全量上下文的插件，从而避免大模型因为上下文不足而出现的幻觉。
+
 ## 快速启动
 
 按下 `Ctrl+Shift+P` 或者 `CMD+Shift+P` 执行我们的初始化命令 `Init Config File` 初始化一个配置文件：
@@ -8,7 +12,7 @@
 
 ![generate-all-code-context-command](https://jtong-pic.obs.cn-north-4.myhuaweicloud.com/wish-driven-development/07-build-lang-context/01-generate-all-code-context-command.png)
 
-就可以在 ai_helper/prompt_builder/output/working 下看到我们的`context.txt`，然后直接拖拽到poe或claude等LLM的web输入框，敲击回车即可得到AI对愿望的响应。（如果是chatgpt的话，目前的版本你还需要把你得指令在文本框里再输入一遍，否则可能它不正确响应）
+就可以在 ai_helper/prompt_builder/output/working 下看到我们的`context.txt`，然后直接拖拽到poe或claude等LLM的web输入框，敲击回车即可得到AI对指令的响应。（如果是chatgpt的话，目前的版本你还需要把你的指令在文本框里再输入一遍，否则可能它不正确响应）
 
 以上就是全部操作了，Enjoy。
 
@@ -37,8 +41,8 @@ input:
     请给出代码
 output:     
   prompt:
-    path: ai_helper/prompt_builder/output/working
-    backup_path: ai_helper/prompt_builder/output/backup
+    path: .ai_helper/prompt_builder/output/working
+    backup_path: .ai_helper/prompt_builder/output/backup
 ```
 
 ### 过滤表达式

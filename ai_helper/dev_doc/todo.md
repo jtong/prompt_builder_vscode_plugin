@@ -1,3 +1,8 @@
+## issue
+
+- ignore要不要提前短路（具体方案需要测试一下）？
+
+## archive
 - 测试一下file explorer的refresh
 - 双击打开文件，单击打不开
 - [x] 生成纯related_files yaml

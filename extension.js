@@ -195,8 +195,8 @@ input:
     我希望 <在这加入你想实现的功能>
 output:     
   prompt:
-    path: ai_helper/prompt_builder/output/working
-    backup_path: ai_helper/prompt_builder/output/backup
+    path: .ai_helper/prompt_builder/output/working
+    backup_path: .ai_helper/prompt_builder/output/backup
 # 写完指令后，按下 Ctrl+Shift+P 或者 CMD+Shift+P 执行我们的命令：Generate All Code Context。
 # 就可以在 ai_helper/prompt_builder/output/working 下看到我们的 context.txt 文件。
 # 然后在文件系统中，直接把context.txt拖拽到poe或claude等LLM的web输入框，敲击回车即可得到AI对愿望的响应。（如果是chatgpt的话，目前的版本你还需要把你得指令在文本框里再输入一遍，否则可能它不正确响应）
