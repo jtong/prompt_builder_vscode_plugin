@@ -2,7 +2,7 @@
 	"name": "prompt-context-builder-plugin",
 	"displayName": "Prompt Context Builder",
     "description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
-	"version": "0.2.6",
+	"version": "0.2.7",
 	"publisher": "jtong",
 	"icon": "media/custom-explorer-icon.png",
 	"repository": "https://github.com/jtong/prompt_builder_vscode_plugin",
@@ -13,7 +13,7 @@
 	"categories": [
 		"Machine Learning"
 	],
-	"main": "./dist/extension.js",
+	"main": "./extension.js",
 	"contributes": {
 		"configuration": {
 			"title": "Prompt Context Builder Configuration",
@@ -48,6 +48,10 @@
 				"command": "generateAllCodeContext",
 				"title": "Generate All Code Context"
 			},
+            {
+                "command": "generateAllFromClipboard",
+                "title": "Generate All from Clipboard"
+            },
 			{
 				"command": "updateContext",
 				"title": "Ex: New Thread with New Context"

@@ -1,7 +1,7 @@
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
-const yaml = require('js-yaml'); // 需要添加对js-yaml的依赖
+const yaml = require('js-yaml');
 const Handlebars = require('handlebars');
 const git = require('isomorphic-git');
 const http = require('isomorphic-git/http/node');
@@ -19,19 +19,11 @@ function createBackupOutputFilePath(outputDir, fileNamePrefix, extension) {
     return outputFile;
 }
 
-async function generateAllCodeContext() {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-        vscode.window.showWarningMessage('No active editor found');
-        return;
-    }
-
-    const currentFilePath = activeEditor.document.uri.fsPath;
-    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const config = yaml.load(fs.readFileSync(currentFilePath, 'utf8'));
-
+// **核心逻辑函数**
+async function executeGenerateAllCodeContext(config, workspaceRoot) {
     let project_base_path = workspaceRoot;
     let outputFilePrefix = path.basename(workspaceRoot);
+    
     if (config.project && config.project.type === 'git') {
         const gitRepoPath = path.join(workspaceRoot, config.input.git_clone_to_path || 'git_repo');
         const gitRepoUrl = config.project.base_path;
@@ -86,7 +78,7 @@ async function generateAllCodeContext() {
 ${renderedInstruction}
 </Instruction>
 `;
-    const MARKDOWN_TEMPLATE = `请基于 “项目文件夹树”结构 和 “项目内文件” 里的代码， 完成下面的 “任务”
+    const MARKDOWN_TEMPLATE = `请基于 "项目文件夹树"结构 和 "项目内文件" 里的代码， 完成下面的 "任务"
 
 ## 项目文件夹树
 
@@ -150,6 +142,7 @@ ${renderedInstruction}
     }
 
     let outputMode = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('generateOutputToClipboard');
+    
     switch (outputMode) {
         case 'none':
             // 不输出
@@ -167,6 +160,62 @@ ${renderedInstruction}
     }
 }
 
+// **原有的 generateAllCodeContext 函数简化**
+async function generateAllCodeContext() {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+        vscode.window.showWarningMessage('No active editor found');
+        return;
+    }
+
+    const currentFilePath = activeEditor.document.uri.fsPath;
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    
+    let config;
+    try {
+        config = yaml.load(fs.readFileSync(currentFilePath, 'utf8'));
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to read or parse config file: ${error.message}`);
+        return;
+    }
+
+    await executeGenerateAllCodeContext(config, workspaceRoot);
+}
+
+// **新增的 generateAllFromClipboard 函数**
+async function generateAllFromClipboard() {
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    
+    // 从剪切板读取内容
+    let clipboardContent;
+    try {
+        clipboardContent = await vscode.env.clipboard.readText();
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to read from clipboard: ${error.message}`);
+        return;
+    }
+    
+    if (!clipboardContent.trim()) {
+        vscode.window.showWarningMessage('Clipboard is empty');
+        return;
+    }
+    
+    // 解析 YAML 配置
+    let config;
+    try {
+        config = yaml.load(clipboardContent);
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to parse YAML from clipboard: ${error.message}`);
+        return;
+    }
+    
+    if (!config) {
+        vscode.window.showWarningMessage('Invalid YAML configuration in clipboard');
+        return;
+    }
+
+    await executeGenerateAllCodeContext(config, workspaceRoot);
+}
 
 function createUniqueFileName(dir, baseName, extension) {
     let fileName = `${baseName}${extension}`;
@@ -213,6 +262,8 @@ output:
 function activate(context) {
 
     context.subscriptions.push(vscode.commands.registerCommand('generateAllCodeContext', generateAllCodeContext));
+    
+    context.subscriptions.push(vscode.commands.registerCommand('generateAllFromClipboard', generateAllFromClipboard));
     
     context.subscriptions.push(vscode.commands.registerCommand('initializeConfigFile', initializeConfigFile));
 

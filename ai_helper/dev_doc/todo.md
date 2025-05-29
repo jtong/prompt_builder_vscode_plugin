@@ -1,6 +1,7 @@
 ## issue
 
 - ignore要不要提前短路（具体方案需要测试一下）？
+- asar文件其实是不能在插件内读取的，所以，我们需要把folder tree按批次执行filter，每次都生成一个tree，每次都在之前的基础上过滤。（这有个问题……第一个怎么办……，有可能第一个用文件过滤掉，第二个开始才使用json过滤。）
 
 ## archive
 - 测试一下file explorer的refresh

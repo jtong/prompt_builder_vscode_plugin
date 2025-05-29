@@ -1,33 +1,31 @@
 project:
   base_path: ./
-  ignore:
-    path:
-      - target
-      - .idea
-      - .mvn
-      - prompt
-      - prompt-builder
-      - .git
-      - ai_helper
-      - node_modules
-      - spike
-      - dist
-      - media
-    file:
-      - .DS_Store
+  filters:
+    - ignore:
+        - target
+        - .idea
+        - .mvn
+        - prompt
+        - prompt-builder
+        - .git
+        - ai_helper
+        - node_modules
+        - spike
+        - dist
+        - media
+        - "**/.DS_Store"
+        - LICENSE.txt
+        - package-lock.json
+        - .ai_helper
 input:
   prompt_template:
     path: ai_helper/prompt_builder/prompt    
-  relative_files:
-    template: >
-      ```yaml
-
-      {{{content}}}
-
-      ```
+  instruction: |
+    # 任务
+    我希望 加一个新命令 Generate All from Clipboard， 就是从剪切板读取然后走Generate All Code Context命令的逻辑，只是模板是从剪切板读取，其他逻辑不变
   git_clone_to_path: ai_helper/git_repo
   
 output:     
   prompt:
-    path: ai_helper/prompt_builder/output/working
-    backup_path: ai_helper/prompt_builder/output/backup
+    path: .ai_helper/prompt_builder/output/working
+    backup_path: .ai_helper/prompt_builder/output/backup

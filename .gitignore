@@ -3,4 +3,4 @@
 node_modules
 *.vsix
 dist
-.ai_helper/agent
+.ai_helper
