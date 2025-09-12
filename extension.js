@@ -19,6 +19,119 @@ function createBackupOutputFilePath(outputDir, fileNamePrefix, extension) {
     return outputFile;
 }
 
+// **提取XML文件中的Instruction标签内容**
+function extractInstructionsFromXmlFiles(folderPath) {
+    let instructions = [];
+    
+    if (!fs.existsSync(folderPath)) {
+        return null;
+    }
+
+    const files = fs.readdirSync(folderPath);
+    const xmlFiles = files.filter(file => path.extname(file).toLowerCase() === '.xml');
+    
+    if (xmlFiles.length === 0) {
+        return [];
+    }
+
+    for (const xmlFile of xmlFiles) {
+        const filePath = path.join(folderPath, xmlFile);
+        try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            
+            // 使用正则表达式匹配 <Instruction> 标签及其内容
+            const instructionRegex = /<Instruction>([\s\S]*?)<\/Instruction>/gi;
+            let match;
+            
+            while ((match = instructionRegex.exec(content)) !== null) {
+                // 包含标签本身
+                const fullInstruction = match[0];
+                instructions.push({
+                    file: xmlFile,
+                    instruction: fullInstruction
+                });
+            }
+        } catch (error) {
+            console.error(`Error reading file ${xmlFile}:`, error);
+        }
+    }
+    
+    return instructions;
+}
+
+// **从选中文件夹提取Instructions**
+async function extractInstructionsFromSelectedFolder(uri) {
+    if (!uri || !uri.fsPath) {
+        vscode.window.showErrorMessage('No folder selected');
+        return;
+    }
+
+    const folderPath = uri.fsPath;
+    const stats = fs.statSync(folderPath);
+    
+    if (!stats.isDirectory()) {
+        vscode.window.showErrorMessage('Selected item is not a folder');
+        return;
+    }
+
+    const instructions = extractInstructionsFromXmlFiles(folderPath);
+    
+    if (instructions === null) {
+        vscode.window.showErrorMessage('Selected folder does not exist');
+        return;
+    }
+    
+    if (instructions.length === 0) {
+        vscode.window.showWarningMessage('No XML files with Instruction tags found in the selected folder');
+        return;
+    }
+
+    // 格式化输出内容
+    let output = '';
+    for (const item of instructions) {
+        output += `File: ${item.file}\n`;
+        output += `${item.instruction}\n\n`;
+    }
+
+    // 复制到剪切板
+    await vscode.env.clipboard.writeText(output);
+    vscode.window.showInformationMessage(`Extracted ${instructions.length} instruction(s) from ${instructions.length} XML file(s) and copied to clipboard`);
+}
+
+// **从备份文件夹提取Instructions**
+async function extractInstructionsFromBackupFolder() {
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspaceRoot) {
+        vscode.window.showErrorMessage('No workspace folder found');
+        return;
+    }
+
+    const backupFolderPath = path.join(workspaceRoot, '.ai_helper', 'prompt_builder', 'output', 'backup');
+    
+    const instructions = extractInstructionsFromXmlFiles(backupFolderPath);
+    
+    if (instructions === null) {
+        vscode.window.showErrorMessage('Backup folder does not exist: .ai_helper/prompt_builder/output/backup');
+        return;
+    }
+    
+    if (instructions.length === 0) {
+        vscode.window.showWarningMessage('No XML files with Instruction tags found in backup folder');
+        return;
+    }
+
+    // 格式化输出内容
+    let output = '';
+    for (const item of instructions) {
+        output += `File: ${item.file}\n`;
+        output += `${item.instruction}\n\n`;
+    }
+
+    // 复制到剪切板
+    await vscode.env.clipboard.writeText(output);
+    vscode.window.showInformationMessage(`Extracted ${instructions.length} instruction(s) from backup folder and copied to clipboard`);
+}
+
 // **核心逻辑函数**
 async function executeGenerateAllCodeContext(config, workspaceRoot, includeInstruction = true) {
     let project_base_path = workspaceRoot;
@@ -313,10 +426,14 @@ function activate(context) {
     
     context.subscriptions.push(vscode.commands.registerCommand('initializeConfigFile', initializeConfigFile));
 
+    // **注册提取Instructions的命令**
+    context.subscriptions.push(vscode.commands.registerCommand('extractInstructionsFromSelectedFolder', extractInstructionsFromSelectedFolder));
+    
+    context.subscriptions.push(vscode.commands.registerCommand('extractInstructionsFromBackupFolder', extractInstructionsFromBackupFolder));
+
     context.subscriptions.push(vscode.commands.registerCommand('updateContext', async () => {
         vscode.window.showInformationMessage(`In Development, Not Support Now`);
     }));
-
 }
 
 function deactivate() { }

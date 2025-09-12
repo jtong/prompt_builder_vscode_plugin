@@ -24,9 +24,8 @@ input:
   instruction: |
     # 任务
     我希望 
-    - generateAllCodeContext 改成 generateAllCodeContextAndInstruction
-    - generateAllFromClipboard 改成 generateInstructionFromClipboard
-    - 加一个新命令 generateContextOnly，生成的时候只生成Context部分，没有Instruction部分。
+    - 加一个右键新菜单项，可以把选中文件夹下的所有xml文件的instruction标签的文本内容（含instruction标签本身）提取出来，存储到剪切板里。如果没有就弹出提示没有。
+    - 再加一个命令，可以直接读取 .ai_helper/prompt_builder/output/backup 作为目标文件夹来完成同样的功能
   git_clone_to_path: ai_helper/git_repo
   
 output:     

@@ -56,6 +56,14 @@
                 "command": "generateContextOnly",
                 "title": "Generate Context Only"
             },
+            {
+                "command": "extractInstructionsFromSelectedFolder",
+                "title": "Extract Instructions from XML Files"
+            },
+            {
+                "command": "extractInstructionsFromBackupFolder",
+                "title": "Extract Instructions from Backup Folder"
+            },
 			{
 				"command": "updateContext",
 				"title": "Ex: New Thread with New Context"
@@ -71,6 +79,13 @@
 		},
 		"menus": {
 			"view/title": [
+			],
+			"explorer/context": [
+				{
+					"command": "extractInstructionsFromSelectedFolder",
+					"when": "explorerResourceIsFolder",
+					"group": "navigation@1"
+				}
 			]
 		}
 	},
