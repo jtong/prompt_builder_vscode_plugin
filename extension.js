@@ -20,7 +20,7 @@ function createBackupOutputFilePath(outputDir, fileNamePrefix, extension) {
 }
 
 // **核心逻辑函数**
-async function executeGenerateAllCodeContext(config, workspaceRoot) {
+async function executeGenerateAllCodeContext(config, workspaceRoot, includeInstruction = true) {
     let project_base_path = workspaceRoot;
     let outputFilePrefix = path.basename(workspaceRoot);
     
@@ -63,6 +63,29 @@ async function executeGenerateAllCodeContext(config, workspaceRoot) {
     }
     const renderedInstruction = prompt_render_with_config_object(instruction, config, '', project_base_path);
 
+    // **Context Only 模板**
+    const XML_CONTEXT_ONLY_TEMPLATE = `<Project>
+<folder_tree>
+{{ folder_tree }}
+</folder_tree>
+<files>
+{{ all_files_xml }}
+</files>
+</Project>
+`;
+
+    const MARKDOWN_CONTEXT_ONLY_TEMPLATE = `## 项目文件夹树
+
+\`\`\`
+{{ folder_tree }}
+\`\`\`
+
+## 项目内文件
+
+{{ all_files_markdown }}
+`;
+
+    // **Context + Instruction 模板**
     const XML_TEMPLATE = `请基于 Project 里的代码， 完成下面的 Instruction
 
 <Project>
@@ -95,8 +118,9 @@ ${renderedInstruction}
 ${renderedInstruction}
 `
 
-    let template = XML_TEMPLATE;
+    let template = includeInstruction ? XML_TEMPLATE : XML_CONTEXT_ONLY_TEMPLATE;
     let extentions_name = ".xml";
+    
     if (config.input && config.input.instruction_template) {
         // 优先使用自定义模板
         template = config.input.instruction_template;
@@ -105,11 +129,11 @@ ${renderedInstruction}
         const tempalte_option = vscode.workspace.getConfiguration('promptContextBuilderPlugin').get('generateAllTemplate');
         switch (tempalte_option) {
             case 'xml':
-                template = XML_TEMPLATE;
+                template = includeInstruction ? XML_TEMPLATE : XML_CONTEXT_ONLY_TEMPLATE;
                 extentions_name = ".xml";
                 break;
             case 'markdown':
-                template = MARKDOWN_TEMPLATE;
+                template = includeInstruction ? MARKDOWN_TEMPLATE : MARKDOWN_CONTEXT_ONLY_TEMPLATE;
                 extentions_name = ".md";
                 break;
         }
@@ -160,8 +184,7 @@ ${renderedInstruction}
     }
 }
 
-// **原有的 generateAllCodeContext 函数简化**
-async function generateAllCodeContext() {
+async function generateAllCodeContextAndInstruction() {
     const activeEditor = vscode.window.activeTextEditor;
     if (!activeEditor) {
         vscode.window.showWarningMessage('No active editor found');
@@ -179,11 +202,10 @@ async function generateAllCodeContext() {
         return;
     }
 
-    await executeGenerateAllCodeContext(config, workspaceRoot);
+    await executeGenerateAllCodeContext(config, workspaceRoot, true);
 }
 
-// **新增的 generateAllFromClipboard 函数**
-async function generateAllFromClipboard() {
+async function generateInstructionFromClipboard() {
     const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
     
     // 从剪切板读取内容
@@ -214,7 +236,28 @@ async function generateAllFromClipboard() {
         return;
     }
 
-    await executeGenerateAllCodeContext(config, workspaceRoot);
+    await executeGenerateAllCodeContext(config, workspaceRoot, true);
+}
+
+async function generateContextOnly() {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+        vscode.window.showWarningMessage('No active editor found');
+        return;
+    }
+
+    const currentFilePath = activeEditor.document.uri.fsPath;
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    
+    let config;
+    try {
+        config = yaml.load(fs.readFileSync(currentFilePath, 'utf8'));
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to read or parse config file: ${error.message}`);
+        return;
+    }
+
+    await executeGenerateAllCodeContext(config, workspaceRoot, false);
 }
 
 function createUniqueFileName(dir, baseName, extension) {
@@ -246,7 +289,7 @@ output:
   prompt:
     path: .ai_helper/prompt_builder/output/working
     backup_path: .ai_helper/prompt_builder/output/backup
-# 写完指令后，按下 Ctrl+Shift+P 或者 CMD+Shift+P 执行我们的命令：Generate All Code Context。
+# 写完指令后，按下 Ctrl+Shift+P 或者 CMD+Shift+P 执行我们的命令：Generate All Code Context And Instruction。
 # 就可以在 ai_helper/prompt_builder/output/working 下看到我们的 context.txt 文件。
 # 然后在文件系统中，直接把context.txt拖拽到poe或claude等LLM的web输入框，敲击回车即可得到AI对愿望的响应。（如果是chatgpt的话，目前的版本你还需要把你得指令在文本框里再输入一遍，否则可能它不正确响应）
 `;
@@ -260,10 +303,13 @@ output:
 }
 
 function activate(context) {
-
-    context.subscriptions.push(vscode.commands.registerCommand('generateAllCodeContext', generateAllCodeContext));
+    // **注册重命名后的命令**
+    context.subscriptions.push(vscode.commands.registerCommand('generateAllCodeContextAndInstruction', generateAllCodeContextAndInstruction));
     
-    context.subscriptions.push(vscode.commands.registerCommand('generateAllFromClipboard', generateAllFromClipboard));
+    context.subscriptions.push(vscode.commands.registerCommand('generateInstructionFromClipboard', generateInstructionFromClipboard));
+    
+    // **注册新命令**
+    context.subscriptions.push(vscode.commands.registerCommand('generateContextOnly', generateContextOnly));
     
     context.subscriptions.push(vscode.commands.registerCommand('initializeConfigFile', initializeConfigFile));
 

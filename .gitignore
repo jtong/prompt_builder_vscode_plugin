@@ -3,4 +3,5 @@
 node_modules
 *.vsix
 dist
-.ai_helper
+.ai_helper/agent
+.ai_helper/prompt_builder

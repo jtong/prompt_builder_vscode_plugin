@@ -1,0 +1,35 @@
+project:
+  base_path: ./
+  filters:
+    - ignore:
+        - target
+        - .idea
+        - .mvn
+        - prompt
+        - prompt-builder
+        - .git
+        - ai_helper
+        - node_modules
+        - spike
+        - dist
+        - media
+        - "**/.DS_Store"
+        - LICENSE.txt
+        - package-lock.json
+        - .ai_helper
+        - example
+input:
+  prompt_template:
+    path: ai_helper/prompt_builder/prompt    
+  instruction: |
+    # 任务
+    我希望 
+    - generateAllCodeContext 改成 generateAllCodeContextAndInstruction
+    - generateAllFromClipboard 改成 generateInstructionFromClipboard
+    - 加一个新命令 generateContextOnly，生成的时候只生成Context部分，没有Instruction部分。
+  git_clone_to_path: ai_helper/git_repo
+  
+output:     
+  prompt:
+    path: .ai_helper/prompt_builder/output/working
+    backup_path: .ai_helper/prompt_builder/output/backup
