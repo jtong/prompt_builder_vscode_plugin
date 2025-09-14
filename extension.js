@@ -210,6 +210,8 @@ async function executeGenerateAllCodeContext(config, workspaceRoot, includeInstr
 </files>
 </Project>
 
+{{ read_only_references }}
+
 <Instruction>
 ${renderedInstruction}
 </Instruction>
@@ -225,6 +227,10 @@ ${renderedInstruction}
 ## 项目内文件
 
 {{ all_files_markdown }}
+
+## 外部引用
+
+{{ read_only_references }}
 
 ## 任务
 
