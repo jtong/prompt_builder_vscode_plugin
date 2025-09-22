@@ -1,7 +1,7 @@
 {
 	"name": "prompt-context-builder-plugin",
 	"displayName": "Prompt Context Builder",
-    "description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
+	"description": "plugin of prompt-context-builder(Based on project engineering files and other information, automatically generate context related to tasks to save the cost of writing prompt words.)",
 	"version": "0.2.8",
 	"publisher": "jtong",
 	"icon": "media/custom-explorer-icon.png",
@@ -13,7 +13,7 @@
 	"categories": [
 		"Machine Learning"
 	],
-	"main": "./dist/extension.js",
+	"main": "./extension.js",
 	"contributes": {
 		"configuration": {
 			"title": "Prompt Context Builder Configuration",
@@ -40,46 +40,41 @@
 			}
 		},
 		"commands": [
-            {
-                "command": "initializeConfigFile",
-                "title": "Init Config File"
-            },
+			{
+				"command": "initializeConfigFile",
+				"title": "Init Config File"
+			},
 			{
 				"command": "generateAllCodeContextAndInstruction",
 				"title": "Generate All Code Context And Instruction"
 			},
-            {
-                "command": "generateInstructionFromClipboard",
-                "title": "Generate Instruction from Clipboard"
-            },
-            {
-                "command": "generateContextOnly",
-                "title": "Generate Context Only"
-            },
-            {
-                "command": "extractInstructionsFromSelectedFolder",
-                "title": "Extract Instructions from XML Files"
-            },
-            {
-                "command": "extractInstructionsFromBackupFolder",
-                "title": "Extract Instructions from Backup Folder"
-            },
+			{
+				"command": "generateInstructionFromClipboard",
+				"title": "Generate Instruction from Clipboard"
+			},
+			{
+				"command": "generateContextOnly",
+				"title": "Generate Context Only"
+			},
+			{
+				"command": "extractInstructionsFromSelectedFolder",
+				"title": "Extract Instructions from XML Files"
+			},
+			{
+				"command": "extractInstructionsFromBackupFolder",
+				"title": "Extract Instructions from Backup Folder"
+			},
 			{
 				"command": "updateContext",
 				"title": "Ex: New Thread with New Context"
 			}
 		],
 		"viewsContainers": {
-			"activitybar": [
-
-			]
+			"activitybar": []
 		},
-		"views": {
-			
-		},
+		"views": {},
 		"menus": {
-			"view/title": [
-			],
+			"view/title": [],
 			"explorer/context": [
 				{
 					"command": "extractInstructionsFromSelectedFolder",
@@ -98,10 +93,11 @@
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {
+		"@jtong/my-yaml-loader": "^1.0.5",
 		"axios": "^1.6.8",
 		"handlebars": "^4.7.8",
 		"isomorphic-git": "^1.25.6",
 		"js-yaml": "^4.1.0",
-		"prompt-context-builder": "^1.2.4"
+		"prompt-context-builder": "^1.2.5"
 	}
 }

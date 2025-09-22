@@ -9,6 +9,13 @@ const url = require('url');
 
 const { prompt_render, folder_tree, prompt_render_with_config_object } = require('prompt-context-builder');
 
+const { processRefSync } = require("@jtong/my-yaml-loader")
+
+function prompt_render_with_ref_process(templateText, config, contextPath, baseDir){
+    const processedConfig = processRefSync(config, baseDir)
+    return prompt_render_with_config_object(templateText, config, contextPath, baseDir);
+}
+
 function createBackupOutputFilePath(outputDir, fileNamePrefix, extension) {
     let suffix = 1;
     let outputFile;
@@ -174,7 +181,7 @@ async function executeGenerateAllCodeContext(config, workspaceRoot, includeInstr
     if (config.input && config.input.instruction) {
         instruction = config.input.instruction;
     }
-    const renderedInstruction = prompt_render_with_config_object(instruction, config, '', project_base_path);
+    const renderedInstruction = prompt_render_with_ref_process(instruction, config, '', project_base_path);
 
     // **Context Only 模板**
     const XML_CONTEXT_ONLY_TEMPLATE = `<Project>
@@ -257,7 +264,7 @@ ${renderedInstruction}
                 break;
         }
     }
-    const renderedContent = prompt_render_with_config_object(template, config, '', project_base_path);
+    const renderedContent = prompt_render_with_ref_process(template, config, '', project_base_path);
 
     // 输出文件路径
     const outputDir = path.join(workspaceRoot, config.output.prompt.path);

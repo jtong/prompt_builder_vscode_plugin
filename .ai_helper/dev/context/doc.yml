@@ -1,0 +1,63 @@
+project:
+  base_path: ./
+  filters:
+    - ignore:
+        - target
+        - .idea
+        - .mvn
+        - prompt
+        - prompt-builder
+        - .git
+        - ai_helper
+        - node_modules
+        - spike
+        - dist
+        - media
+        - "**/.DS_Store"
+        - LICENSE.txt
+        - package-lock.json
+        - .ai_helper
+        - example
+read_only_references:
+  - folder:
+      base_path: "./node_modules/prompt-context-builder"
+      desc: "node_modules/prompt-context-builder 源码"
+      filters:
+        - ignore:
+          - ".idea"
+          - .git
+          - node_modules
+          - ai_helper
+          - .ai_helper
+          - "spike"
+          - config.yml
+          - doc
+          - "**/*.png"
+          - "**/.DS_Store"
+          - "**/LICENSE.txt"
+          - "**/package-lock.json"
+          - read_model
+          - related_java_class_analysis
+          - resolve_java_class_full_name
+input:
+  instruction: |
+    # 任务
+    我希望 
+    - 整理DSL的语法，结合插件代码对 prompt-context-builder 的应用 和 prompt-context-builder 的源码。综合提取出yaml的DSL语法，方便AI理解并根据人的要求来编写DSL。细节要求如下：
+      - project的./表示当前vscode工程打开的目录，markdown的模板不用介绍，我们主要用xml。instruction_template也不用介绍，我们只用instruction
+      - 通配符格式只是说说是glob就好了，能懂，但要说ignore指向folder，那么folder下的内容会被ignore，但filter_in指向folder但没加**就不会加入folder下的文件。
+      - 向下兼容的格式不用写，我们准备提供一个先进的版本，针对XML的是我们的主要提取知识。
+      - ReadOnlyReference我们可以有多个，但是Project只能有一个
+      - git 是一个很边缘的功能，建议放到最后，算是随便提一句
+      - 模板助手结合xml的模板讲一下，并告诉instruction里能使用什么模板，比如partial
+      - Reader已经是旧功能了，不用提
+
+
+
+
+  git_clone_to_path: ai_helper/git_repo
+  
+output:     
+  prompt:
+    path: .ai_helper/prompt_builder/output/working
+    backup_path: .ai_helper/prompt_builder/output/backup

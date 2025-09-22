@@ -18,6 +18,7 @@ project:
         - package-lock.json
         - .ai_helper
         - example
+
 input:
   prompt_template:
     path: ai_helper/prompt_builder/prompt    
